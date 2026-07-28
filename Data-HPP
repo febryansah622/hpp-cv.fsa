@@ -319,7 +319,7 @@
    Selama kosong, halaman ini pakai DATA CONTOH (Juli 2026) untuk preview.
    ====================================================================== */
 const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbz2SYHYA-bQgADJPmyxTDnbLUB_xuLZhx6GT5F7x_N6cYj_0JI6i5_PdH6zFo4yn-m_aw/exec"
+  API_URL: "https://script.google.com/macros/s/AKfycbzXKD2FDdziEpBulOCFwoyzbE9mDG2LkVUplBNsIOjik2Hg3DZKzdgA2UevuPND6HJhcg/exec"
 };
 
 /* ---------- DATA CONTOH (dipakai kalau API_URL belum diisi) ---------- */
