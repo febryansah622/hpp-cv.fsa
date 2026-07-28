@@ -451,6 +451,7 @@ const DEMO_DATA = [
 DEMO_DATA.forEach(withDemoCategories);
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
 let ALL_ROWS = [];
+let ALL_SUB = [];   // baris "Data Sub Unit" dari API
 let MODE_CONTOH = false;
 let charts = {};
 /* ---------------------------------------------------------------------
@@ -530,6 +531,7 @@ if (!res.ok) throw new Error("HTTP " + res.status + " dari Apps Script");
 const json = await res.json();
 /* doGet() bisa membalas { error: "..." } - dulu ini diam-diam jadi []. */
 if (json.error) throw new Error(json.error);
+ALL_SUB = json.subunit || [];
 return json.data || [];
 } catch(err){
 /* PENTING: dashboard pelaporan tidak boleh diam-diam menampilkan angka
@@ -666,13 +668,33 @@ tbody.innerHTML = rows.map(r => `
 renderPekan(rows);
 renderKategori(rows);
 // ---- Bar chart: Omset vs Pemakaian per unit ----
+/* Unit yang punya sub-unit ditampilkan TERPECAH di sini: Dapur Tangsel jadi
+Tangsel / Tangkot / Non-reguler, Outlet Kebuli Juni jadi Margonda / Tipar.
+Unit tanpa sub-unit tetap satu batang. Totalnya tidak berubah, hanya
+penyajiannya yang dirinci. */
+const barLabels = [], barOmset = [], barPakai = [];
+rows.forEach(r => {
+const subs = subUntuk(r["Bulan"], r["Unit"]);
+if (subs.length >= 2){
+subs.forEach(sub => {
+barLabels.push(sub["Sub Unit"]);
+barOmset.push(toNum(sub["Total Omset"],"Total Omset"));
+barPakai.push(toNum(sub["Total Pemakaian"],"Total Pemakaian"));
+});
+} else {
+barLabels.push(r["Unit"]);
+barOmset.push(toNum(r["Total Omset"],"Total Omset"));
+barPakai.push(toNum(r["Total Pemakaian"],"Total Pemakaian"));
+}
+});
+
 makeChart("bar", "chartBar", {
 type: "bar",
 data: {
-labels: rows.map(r=>r["Unit"]),
+labels: barLabels,
 datasets: [
-{ label:"Omset", data: rows.map(r=>toNum(r["Total Omset"],"Total Omset")), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
-{ label:"Pemakaian", data: rows.map(r=>toNum(r["Total Pemakaian"],"Total Pemakaian")), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
+{ label:"Omset", data: barOmset, backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
+{ label:"Pemakaian", data: barPakai, backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
 ]
 },
 options: {
@@ -745,6 +767,12 @@ y1:{ position:"right", beginAtZero:true,
 }
 });
 }
+/* Baris sub-unit yang relevan untuk bulan (dan opsional unit) terpilih. */
+function subUntuk(bulan, unit){
+return ALL_SUB.filter(r =>
+r["Bulan"] === bulan && (unit === undefined || r["Unit"] === unit));
+}
+
 /* Rincian per pekan. Untuk satu unit ini angka aslinya; untuk "Semua Unit"
 angka dijumlahkan lintas unit, dan persentasenya dihitung dari jumlah itu
 (bukan rata-rata persentase antar unit, yang akan menyesatkan karena unit
@@ -769,6 +797,56 @@ const unitUntukBadge = satuUnit ? unitLabel : undefined;
 const tot = baris.reduce((a,b)=>({
 porsi:a.porsi+b.porsi, omset:a.omset+b.omset, beli:a.beli+b.beli, pakai:a.pakai+b.pakai
 }), {porsi:0,omset:0,beli:0,pakai:0});
+
+/* Kalau unit terpilih punya sub-unit, tabel pekanan dipecah per sub-unit
+(Tangsel & Tangkot; Margonda & Tipar) dengan subtotal masing-masing, lalu
+satu baris gabungan di bawah. */
+const bulanAktif = document.getElementById("filterBulan").value;
+const subs = satuUnit ? subUntuk(bulanAktif, unitLabel) : [];
+if (subs.length >= 2){
+document.getElementById("pekanSub").textContent =
+`Rincian pekanan — ${unitLabel}, dipecah per sub-unit`;
+let html = "";
+subs.forEach(sub => {
+const b5 = [1,2,3,4,5].map(k => {
+const porsi = toNum(sub["Porsi Pekan "+k]);
+const omset = toNum(sub["Omset Pekan "+k]);
+const beli  = toNum(sub["Pembelian Pekan "+k]);
+const pakai = toNum(sub["Pemakaian Pekan "+k]);
+return { k, porsi, omset, beli, pakai, persen: hpp(pakai, omset) };
+});
+const st = b5.reduce((a,b)=>({porsi:a.porsi+b.porsi,omset:a.omset+b.omset,beli:a.beli+b.beli,pakai:a.pakai+b.pakai}),{porsi:0,omset:0,beli:0,pakai:0});
+html += `<tr style="background:var(--surface-raised);">
+<td colspan="6" style="font-weight:600;letter-spacing:.04em;">${sub["Sub Unit"]}</td></tr>`;
+html += b5.map(b => `
+<tr${(b.porsi||b.omset||b.beli||b.pakai) ? "" : ' style="opacity:.35"'}>
+<td style="padding-left:22px;">Pekan ${b.k}</td>
+<td>${b.porsi.toLocaleString("id-ID")}</td>
+<td>${rupiah(b.omset)}</td>
+<td>${rupiah(b.beli)}</td>
+<td>${rupiah(b.pakai)}</td>
+<td>${isFinite(b.persen) ? pctBadge(b.persen, unitUntukBadge) : '<span class="badge">–</span>'}</td>
+</tr>`).join("");
+html += `<tr style="font-weight:600;">
+<td style="padding-left:22px;">Subtotal ${sub["Sub Unit"]}</td>
+<td>${st.porsi.toLocaleString("id-ID")}</td>
+<td>${rupiah(st.omset)}</td>
+<td>${rupiah(st.beli)}</td>
+<td>${rupiah(st.pakai)}</td>
+<td>${isFinite(hpp(st.pakai,st.omset)) ? pctBadge(hpp(st.pakai,st.omset), unitUntukBadge) : '<span class="badge">–</span>'}</td>
+</tr>`;
+});
+html += `<tr style="border-top:2px solid var(--divider);font-weight:700;">
+<td>Gabungan ${unitLabel}</td>
+<td>${tot.porsi.toLocaleString("id-ID")}</td>
+<td>${rupiah(tot.omset)}</td>
+<td>${rupiah(tot.beli)}</td>
+<td>${rupiah(tot.pakai)}</td>
+<td>${isFinite(hpp(tot.pakai,tot.omset)) ? pctBadge(hpp(tot.pakai,tot.omset), unitUntukBadge) : '<span class="badge">–</span>'}</td>
+</tr>`;
+document.getElementById("tablePekanBody").innerHTML = html;
+return;
+}
 
 document.getElementById("tablePekanBody").innerHTML =
 baris.map(b => `
