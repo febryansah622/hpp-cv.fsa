@@ -239,6 +239,13 @@ font-size:11.5px;
 font-family:'IBM Plex Mono',monospace;
 display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
 }
+.empty-note.bahaya{
+background:var(--rust);
+color:#fff;
+border-color:var(--rust);
+font-weight:600;
+font-size:13px;
+}
 .empty-note{
 background:var(--copper-soft);
 border:1px solid var(--copper);
@@ -289,6 +296,7 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 <div class="kpi" id="kpiPersenCard">
 <p class="lbl">Pemakaian / Omset</p>
 <p class="val mono" id="kpiPersen">–</p>
+<p class="lbl" id="kpiPersenSub" style="margin-top:6px;opacity:.75;"></p>
 </div>
 </div>
 <div class="section-hd"><span class="num">01</span><h2>Perbandingan Antar Unit</h2></div>
@@ -304,11 +312,11 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 </div>
 <div class="section-hd"><span class="num">02</span><h2>Tren Mingguan</h2></div>
 <div class="panel wide" style="margin-bottom:32px;">
-<h3>Omset vs Pemakaian per Pekan</h3>
+<h3>Omset vs Pemakaian per Pekan &middot; % HPP terhadap target</h3>
 <canvas id="chartLine"></canvas>
 </div>
 <div class="section-hd"><span class="num">03</span><h2>Rincian per Unit</h2></div>
-<div class="panel">
+<div class="panel" style="margin-bottom:18px;">
 <table>
 <thead>
 <tr>
@@ -322,6 +330,22 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 </tr>
 </thead>
 <tbody id="tableBody"></tbody>
+</table>
+</div>
+<p class="sub" id="pekanSub" style="margin:0 0 12px;"></p>
+<div class="panel" style="margin-bottom:32px;">
+<table>
+<thead>
+<tr>
+<th>Pekan</th>
+<th>Porsi</th>
+<th>Omset</th>
+<th>Pembelian</th>
+<th>Pemakaian</th>
+<th>% Pemakaian</th>
+</tr>
+</thead>
+<tbody id="tablePekanBody"></tbody>
 </table>
 </div>
 <div class="section-hd"><span class="num">04</span><h2>Rincian Kategori Bahan Pokok</h2></div>
@@ -427,6 +451,7 @@ const DEMO_DATA = [
 DEMO_DATA.forEach(withDemoCategories);
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
 let ALL_ROWS = [];
+let MODE_CONTOH = false;
 let charts = {};
 /* ---------------------------------------------------------------------
 BUGFIX "RpNaN": Number("1.234.567") menghasilkan NaN, dan Math.round(NaN)
@@ -465,10 +490,29 @@ if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1)+"M";
 if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0)+"jt";
 return n.toLocaleString("id-ID");
 };
-function pctBadge(p){
-if (p >= 100) return `<span class="badge high">${p.toFixed(1)}%</span>`;
-if (p >= 70) return `<span class="badge mid">${p.toFixed(1)}%</span>`;
-return `<span class="badge ok">${p.toFixed(1)}%</span>`;
+/* ---------------------------------------------------------------------
+TARGET HPP. Setiap unit DAPUR wajib menjaga Pemakaian/Omset di bawah 60%.
+Outlet Kebuli dan Foodcourt bukan dapur, jadi tidak dinilai terhadap
+target ini - persentasenya tetap tampil, hanya tanpa vonis lewat/tidak.
+--------------------------------------------------------------------- */
+const TARGET_HPP = 60;
+const punyaTarget = u => /dapur/i.test(String(u == null ? "" : u));
+
+/* Ambang warna dihitung dari target, bukan angka tetap seperti sebelumnya
+(dulu 70/100 - tidak ada hubungannya dengan target operasional manapun). */
+function pctBadge(p, unit){
+if (!isFinite(p)) return `<span class="badge">–</span>`;
+const t = p.toFixed(1) + "%";
+if (unit !== undefined && !punyaTarget(unit)) return `<span class="badge">${t}</span>`;
+if (p > TARGET_HPP + 10) return `<span class="badge high">${t}</span>`;
+if (p > TARGET_HPP) return `<span class="badge mid">${t}</span>`;
+return `<span class="badge ok">${t}</span>`;
+}
+
+/* Persentase HPP dari sepasang angka, aman terhadap omset nol. */
+function hpp(pemakaian, omset){
+const o = toNum(omset);
+return o ? (toNum(pemakaian) / o * 100) : NaN;
 }
 async function loadData(){
 if (!CONFIG.API_URL){
@@ -488,9 +532,19 @@ const json = await res.json();
 if (json.error) throw new Error(json.error);
 return json.data || [];
 } catch(err){
-document.getElementById("emptyNote").style.display = "block";
-document.getElementById("emptyNote").textContent =
-"Gagal mengambil data dari API (" + err.message + "). Menampilkan data contoh.";
+/* PENTING: dashboard pelaporan tidak boleh diam-diam menampilkan angka
+palsu. Kegagalan API sekarang ditandai mencolok, dan judul halaman ikut
+diberi label, supaya tidak ada yang salah mengira ini data asli. */
+const note = document.getElementById("emptyNote");
+note.className = "empty-note bahaya";
+note.style.display = "block";
+note.textContent =
+"GAGAL MENGAMBIL DATA DARI APPS SCRIPT (" + err.message + "). " +
+"Semua angka di bawah ini adalah DATA CONTOH, bukan angka asli unit bisnis. " +
+"Periksa Deploy > Manage deployments di Apps Script.";
+document.title = "[DATA CONTOH] " + document.title;
+MODE_CONTOH = true;
+console.error("Fetch ke API gagal:", CONFIG.API_URL, err);
 return DEMO_DATA;
 }
 }
@@ -575,7 +629,7 @@ function render(){
 const rows = getFiltered();
 const bulan = document.getElementById("filterBulan").value;
 document.getElementById("subHeader").textContent =
-`Menampilkan data ${bulan} · ${rows.length} unit`;
+(MODE_CONTOH ? "DATA CONTOH — " : "") + `Menampilkan data ${bulan} · ${rows.length} unit`;
 document.getElementById("footUpdated").textContent =
 "Terakhir dimuat: " + new Date().toLocaleString("id-ID");
 const totalPorsi = rows.reduce((s,r)=>s+toNum(r["Total Porsi"],"Total Porsi"),0);
@@ -587,7 +641,15 @@ document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
 document.getElementById("kpiPemakaian").textContent = rupiah(totalPemakaian);
 document.getElementById("kpiPersen").textContent = persen.toFixed(2)+"%";
 const kpiCard = document.getElementById("kpiPersenCard");
-kpiCard.className = "kpi " + (persen >= 100 ? "rust" : persen >= 70 ? "copper" : "sage");
+kpiCard.className = "kpi " + (persen > TARGET_HPP + 10 ? "rust" : persen > TARGET_HPP ? "copper" : "sage");
+/* Tunjukkan targetnya di kartu, supaya angka 51% langsung punya makna. */
+const unitTerpilih = document.getElementById("filterUnit").value;
+document.getElementById("kpiPersenSub").textContent =
+(unitTerpilih !== "__ALL__" && !punyaTarget(unitTerpilih))
+? "unit non-dapur, tanpa target"
+: "target maks " + TARGET_HPP + "%" + (persen > TARGET_HPP
+    ? " · lewat " + (persen - TARGET_HPP).toFixed(1) + " poin"
+    : " · aman " + (TARGET_HPP - persen).toFixed(1) + " poin");
 // ---- Table ----
 const tbody = document.getElementById("tableBody");
 tbody.innerHTML = rows.map(r => `
@@ -598,9 +660,10 @@ tbody.innerHTML = rows.map(r => `
 <td>${rupiah(r["Total Pembelian"]||0)}</td>
 <td>${rupiah(r["Total Pemakaian"]||0)}</td>
 <td>${rupiah(r["Stok On Hand"]||0)}</td>
-<td>${pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"))}</td>
+<td>${pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"), r["Unit"])}</td>
 </tr>
 `).join("");
+renderPekan(rows);
 renderKategori(rows);
 // ---- Bar chart: Omset vs Pemakaian per unit ----
 makeChart("bar", "chartBar", {
@@ -636,25 +699,97 @@ plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IB
 // ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
 const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+toNum(r["Omset Pekan "+k],"Omset Pekan "+k),0));
 const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+toNum(r["Pemakaian Pekan "+k],"Pemakaian Pekan "+k),0));
+/* Persentase HPP per pekan, digambar di sumbu kanan. Pekan tanpa omset
+dibuat null (bukan 0) supaya garisnya PUTUS di situ - kalau dipaksa 0
+grafiknya terlihat seolah HPP-nya turun sempurna, padahal datanya kosong. */
+const persenPerPekan = omsetPerPekan.map((o,i) => o ? (pemakaianPerPekan[i]/o*100) : null);
+const unitTerpilihLine = document.getElementById("filterUnit").value;
+const tampilkanTarget = unitTerpilihLine === "__ALL__" || punyaTarget(unitTerpilihLine);
+
+const datasetsLine = [
+{ label:"Omset", data: omsetPerPekan, borderColor:"#7BA893", backgroundColor:"#7BA89333", tension:.3, pointRadius:4, fill:true, yAxisID:"y" },
+{ label:"Pemakaian", data: pemakaianPerPekan, borderColor:"#C1573B", backgroundColor:"#C1573B22", tension:.3, pointRadius:4, fill:true, borderDash:[5,4], yAxisID:"y" },
+{ label:"% Pemakaian/Omset", data: persenPerPekan, borderColor:"#C68B46", backgroundColor:"transparent", tension:.3, pointRadius:5, pointBackgroundColor:"#C68B46", fill:false, borderWidth:2, yAxisID:"y1", spanGaps:false }
+];
+if (tampilkanTarget){
+datasetsLine.push({
+label:"Target maks "+TARGET_HPP+"%",
+data:[TARGET_HPP,TARGET_HPP,TARGET_HPP,TARGET_HPP,TARGET_HPP],
+borderColor:"#8E8FC7", borderDash:[3,3], borderWidth:1.5,
+pointRadius:0, fill:false, yAxisID:"y1"
+});
+}
+
 makeChart("line", "chartLine", {
 type: "line",
-data: {
-labels: ["Pekan 1","Pekan 2","Pekan 3","Pekan 4","Pekan 5*"],
-datasets: [
-{ label:"Omset", data: omsetPerPekan, borderColor:"#7BA893", backgroundColor:"#7BA89333", tension:.3, pointRadius:4, fill:true },
-{ label:"Pemakaian", data: pemakaianPerPekan, borderColor:"#C1573B", backgroundColor:"#C1573B22", tension:.3, pointRadius:4, fill:true, borderDash:[5,4] }
-]
-},
+data: { labels: ["Pekan 1","Pekan 2","Pekan 3","Pekan 4","Pekan 5*"], datasets: datasetsLine },
 options: {
 responsive:true,
-plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+interaction:{ mode:"index", intersect:false },
+plugins:{
+legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } },
+tooltip:{ callbacks:{ label: function(ctx){
+const v = ctx.parsed.y;
+if (v === null) return ctx.dataset.label + ": –";
+return ctx.dataset.label + ": " + (ctx.dataset.yAxisID === "y1"
+  ? v.toFixed(1) + "%" : rupiah(v));
+} } }
+},
 scales:{
 x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
-y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
+y:{ position:"left", ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } },
+y1:{ position:"right", beginAtZero:true,
+     ticks:{ color:"#C68B46", font:{family:"IBM Plex Mono", size:10}, callback:v=>v+"%" },
+     grid:{ drawOnChartArea:false } }
 }
 }
 });
 }
+/* Rincian per pekan. Untuk satu unit ini angka aslinya; untuk "Semua Unit"
+angka dijumlahkan lintas unit, dan persentasenya dihitung dari jumlah itu
+(bukan rata-rata persentase antar unit, yang akan menyesatkan karena unit
+besar dan kecil punya bobot berbeda). */
+function renderPekan(rows){
+const unitLabel = document.getElementById("filterUnit").value;
+const satuUnit = unitLabel !== "__ALL__";
+
+document.getElementById("pekanSub").textContent = satuUnit
+? `Rincian pekanan — ${unitLabel}`
+: "Rincian pekanan — gabungan semua unit pada bulan terpilih";
+
+const baris = [1,2,3,4,5].map(k => {
+const porsi = rows.reduce((s,r)=>s+toNum(r["Porsi Pekan "+k],"Porsi Pekan "+k),0);
+const omset = rows.reduce((s,r)=>s+toNum(r["Omset Pekan "+k],"Omset Pekan "+k),0);
+const beli = rows.reduce((s,r)=>s+toNum(r["Pembelian Pekan "+k],"Pembelian Pekan "+k),0);
+const pakai = rows.reduce((s,r)=>s+toNum(r["Pemakaian Pekan "+k],"Pemakaian Pekan "+k),0);
+return { k, porsi, omset, beli, pakai, persen: hpp(pakai, omset) };
+});
+
+const unitUntukBadge = satuUnit ? unitLabel : undefined;
+const tot = baris.reduce((a,b)=>({
+porsi:a.porsi+b.porsi, omset:a.omset+b.omset, beli:a.beli+b.beli, pakai:a.pakai+b.pakai
+}), {porsi:0,omset:0,beli:0,pakai:0});
+
+document.getElementById("tablePekanBody").innerHTML =
+baris.map(b => `
+<tr${b.omset||b.porsi||b.beli||b.pakai ? "" : ' style="opacity:.4"'}>
+<td>Pekan ${b.k}</td>
+<td>${b.porsi.toLocaleString("id-ID")}</td>
+<td>${rupiah(b.omset)}</td>
+<td>${rupiah(b.beli)}</td>
+<td>${rupiah(b.pakai)}</td>
+<td>${isFinite(b.persen) ? pctBadge(b.persen, unitUntukBadge) : '<span class="badge">–</span>'}</td>
+</tr>`).join("") + `
+<tr style="border-top:2px solid var(--divider);font-weight:600;">
+<td>Total pekanan</td>
+<td>${tot.porsi.toLocaleString("id-ID")}</td>
+<td>${rupiah(tot.omset)}</td>
+<td>${rupiah(tot.beli)}</td>
+<td>${rupiah(tot.pakai)}</td>
+<td>${pctBadge(hpp(tot.pakai, tot.omset), unitUntukBadge)}</td>
+</tr>`;
+}
+
 /* Diagnostik section 04. Membedakan tiga sebab yang tampak mirip di layar:
    (a) kolomnya tidak ada sama sekali di Data Gabungan
    (b) kolomnya ada tapi isinya teks/error -> inilah penyebab "RpNaN"
