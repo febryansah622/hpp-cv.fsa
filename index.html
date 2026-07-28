@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -6,7 +7,43 @@
 <title>Rekap HPP — CV. FSA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<!-- Chart.js: dimuat dari salinan LOKAL di repo (vendor/chart.umd.min.js).
+     Kalau file lokal tidak ada / gagal, loader di bawah otomatis coba
+     beberapa CDN cadangan. Inilah perbaikan untuk error "Chart is not defined". -->
+<script src="vendor/chart.umd.min.js"></script>
+<script>
+/* Promise global: resolve true kalau window.Chart akhirnya tersedia. */
+window.__chartReady = (function () {
+  var SOURCES = [
+    "https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.js",
+    "https://unpkg.com/chart.js@4.4.4/dist/chart.umd.js",
+    "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"
+  ];
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error("gagal memuat " + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  return (async function () {
+    if (window.Chart) return true;
+    for (var i = 0; i < SOURCES.length; i++) {
+      try {
+        await loadScript(SOURCES[i]);
+        if (window.Chart) {
+          console.warn("Chart.js dimuat dari cadangan: " + SOURCES[i]);
+          return true;
+        }
+      } catch (e) { console.warn(e.message); }
+    }
+    console.error("Chart.js tidak bisa dimuat dari sumber manapun. Grafik dinonaktifkan.");
+    return false;
+  })();
+})();
+</script>
 <style>
 :root{
 --ink:#12151A;
@@ -235,6 +272,7 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 </div>
 </header>
 <div id="emptyNote" class="empty-note" style="display:none;"></div>
+<div id="chartNote" class="empty-note" style="display:none;"></div>
 <div class="kpi-row">
 <div class="kpi">
 <p class="lbl">Total Porsi</p>
@@ -410,7 +448,13 @@ return DEMO_DATA;
 }
 try{
 const res = await fetch(CONFIG.API_URL);
+/* BUGFIX: dulu status HTTP tidak pernah dicek. Kalau Web App belum
+di-deploy sebagai "Anyone", Google membalas halaman login HTML dan
+res.json() gagal dengan pesan parse yang membingungkan. */
+if (!res.ok) throw new Error("HTTP " + res.status + " dari Apps Script");
 const json = await res.json();
+/* doGet() bisa membalas { error: "..." } - dulu ini diam-diam jadi []. */
+if (json.error) throw new Error(json.error);
 return json.data || [];
 } catch(err){
 document.getElementById("emptyNote").style.display = "block";
@@ -419,24 +463,52 @@ document.getElementById("emptyNote").textContent =
 return DEMO_DATA;
 }
 }
+/* Urutan bulan Indonesia, dipakai untuk mengurutkan dropdown secara
+kronologis. BUGFIX: dulu dropdown mengikuti urutan baris di Data Gabungan
+dan default-nya `bulans[bulans.length-1]` = baris terakhir, bukan bulan
+terbaru. Begitu ada >1 bulan, halaman bisa membuka bulan yang salah. */
+const URUTAN_BULAN = ["Januari","Februari","Maret","April","Mei","Juni",
+"Juli","Agustus","September","Oktober","November","Desember"];
+function kunciBulan(teks){
+const m = String(teks||"").trim().match(/^([A-Za-z]+)\s+(\d{4})$/);
+if (!m) return -1;
+const idx = URUTAN_BULAN.findIndex(b=>b.toLowerCase()===m[1].toLowerCase());
+if (idx === -1) return -1;
+return Number(m[2]) * 12 + idx;
+}
+let filtersBound = false;
 function populateFilters(rows){
 const bulanSel = document.getElementById("filterBulan");
 const unitSel = document.getElementById("filterUnit");
-const bulans = [...new Set(rows.map(r=>r["Bulan"]))];
+const bulans = [...new Set(rows.map(r=>r["Bulan"]))]
+.sort((a,b)=>kunciBulan(a)-kunciBulan(b));
 const units = [...new Set(rows.map(r=>r["Unit"]))];
 bulanSel.innerHTML = bulans.map(b=>`<option value="${b}">${b}</option>`).join("");
 unitSel.innerHTML = `<option value="__ALL__">Semua Unit</option>` +
 units.map(u=>`<option value="${u}">${u}</option>`).join("");
 bulanSel.value = bulans[bulans.length-1];
+/* Pasang listener sekali saja, supaya render() tidak terpanggil berkali-kali
+kalau nanti populateFilters dipanggil ulang (mis. tombol refresh). */
+if (!filtersBound){
 bulanSel.addEventListener("change", render);
 unitSel.addEventListener("change", render);
+filtersBound = true;
+}
 }
 function getFiltered(){
 const bulan = document.getElementById("filterBulan").value;
 const unit = document.getElementById("filterUnit").value;
 return ALL_ROWS.filter(r => r["Bulan"] === bulan && (unit === "__ALL__" || r["Unit"] === unit));
 }
-function destroyChart(key){ if (charts[key]) { charts[key].destroy(); } }
+/* BUGFIX: sebelumnya instance yang sudah di-destroy tetap tersimpan di
+`charts[key]`. Kalau pembuatan chart berikutnya gagal, referensi mati itu
+masih nyangkut dan destroy() berikutnya bisa melempar error. */
+function destroyChart(key){
+if (charts[key]) {
+try { charts[key].destroy(); } catch(e){ /* instance sudah mati, abaikan */ }
+delete charts[key];
+}
+}
 /* Bungkus pembuatan tiap chart supaya kalau satu chart gagal (mis. canvas
 tidak ketemu, atau Chart.js belum sempat load), chart-chart lain TETAP
 lanjut dibuat - tidak ikut berhenti semua seperti sebelumnya. Errornya
@@ -445,6 +517,20 @@ function makeChart(key, canvasId, config){
 const canvas = document.getElementById(canvasId);
 if (!canvas){
 console.error(`Chart "${key}" gagal: elemen <canvas id="${canvasId}"> tidak ditemukan di HTML.`);
+return;
+}
+/* BUGFIX utama: dulu baris ini langsung `new Chart(...)` walau library-nya
+belum/tidak termuat, sehingga muncul "ReferenceError: Chart is not defined"
+empat kali dan area grafik cuma kosong tanpa penjelasan apa pun di layar. */
+if (typeof window.Chart === "undefined"){
+canvas.style.display = "none";
+if (!canvas.parentNode.querySelector(".chart-fallback")){
+const p = document.createElement("p");
+p.className = "chart-fallback sub";
+p.style.cssText = "text-align:center;padding:32px 8px;opacity:.7;font-size:12px;";
+p.textContent = "Grafik tidak tersedia — pustaka Chart.js gagal dimuat.";
+canvas.parentNode.appendChild(p);
+}
 return;
 }
 destroyChart(key);
@@ -593,10 +679,28 @@ y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10.5} }, grid:{ 
 }
 
 (async function init(){
+/* Tunggu Chart.js selesai dimuat (lokal atau CDN cadangan) SEBELUM render,
+supaya render tidak dipanggil saat `Chart` masih undefined. */
+const chartOK = await window.__chartReady;
+if (!chartOK){
+const note = document.getElementById("chartNote");
+note.style.display = "block";
+note.textContent =
+"Pustaka grafik (Chart.js) gagal dimuat — tabel & angka tetap tampil, tapi grafik dikosongkan. " +
+"Pastikan file vendor/chart.umd.min.js ikut ter-upload ke repo, atau periksa koneksi/pemblokir iklan.";
+}
+
 ALL_ROWS = await loadData();
 if (ALL_ROWS.length){
 populateFilters(ALL_ROWS);
 render();
+} else {
+document.getElementById("subHeader").textContent = "Tidak ada data untuk ditampilkan.";
+const note = document.getElementById("emptyNote");
+note.style.display = "block";
+if (!note.textContent){
+note.textContent = "API terhubung tapi mengembalikan 0 baris. Jalankan tarikSemuaData() di Apps Script, lalu muat ulang halaman ini.";
+}
 }
 })();
 </script>
