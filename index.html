@@ -339,6 +339,32 @@ menariknya ke Master HPP, itu bagian yang perlu ditambahkan di Apps Script
 const CONFIG = {
 API_URL: "https://script.google.com/macros/s/AKfycbzXKD2FDdziEpBulOCFwoyzbE9mDG2LkVUplBNsIOjik2Hg3DZKzdgA2UevuPND6HJhcg/exec"
 };
+/* Kategori bahan pokok. Setiap kategori diharapkan punya 2 field di data API:
+"Pembelian <Kategori>" dan "Pemakaian <Kategori>" (persis format field yang sudah
+ada seperti "Total Pembelian" / "Total Pemakaian"). Kalau Apps Script belum
+mengirim field ini, section 04 di bawah tetap tampil tapi nilainya 0 — lihat
+catatan integrasi di akhir file. Dideklarasikan di sini (sebelum DEMO_DATA)
+supaya tidak error "Cannot access before initialization" saat dipakai. */
+const CATEGORIES = [
+"Beras","Laukan","Sayur","Pendamping","Buah","Bumbu",
+"Biaya Masak","Kemasan","Fast-moving Lainnya"
+];
+const CATEGORY_PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B","#D9A05B","#6E9FA8","#A97CA5"];
+/* Bobot proporsi tiap kategori, dipakai HANYA untuk memecah Total Pembelian/
+Total Pemakaian di DEMO_DATA menjadi angka per-kategori yang masuk akal untuk
+preview. Data live dari API tidak memakai ini sama sekali. Dideklarasikan
+sebelum DEMO_DATA supaya tidak kena error "before initialization". */
+const DEMO_WEIGHTS = {
+"Beras":0.15,"Laukan":0.30,"Sayur":0.15,"Pendamping":0.08,"Buah":0.05,
+"Bumbu":0.10,"Biaya Masak":0.07,"Kemasan":0.06,"Fast-moving Lainnya":0.04
+};
+function withDemoCategories(row){
+CATEGORIES.forEach(k=>{
+row["Pembelian "+k] = Math.round((row["Total Pembelian"]||0) * DEMO_WEIGHTS[k]);
+row["Pemakaian "+k] = Math.round((row["Total Pemakaian"]||0) * DEMO_WEIGHTS[k]);
+});
+return row;
+}
 /* ---------- DATA CONTOH (dipakai kalau API_URL belum diisi) ---------- */
 const DEMO_DATA = [
 { "Bulan":"Juli 2026","Unit":"Dapur Malang","Total Porsi":22275,"Total Omset":111375000,"Total Pembelian":69614220,"Total Pemakaian":54228410,"% Pemakaian/Omset":48.69,"Stok On Hand":21478754,
@@ -361,31 +387,7 @@ const DEMO_DATA = [
 "Pemakaian Pekan 1":0,"Pemakaian Pekan 2":0,"Pemakaian Pekan 3":0,"Pemakaian Pekan 4":0,"Pemakaian Pekan 5":0 }
 ];
 DEMO_DATA.forEach(withDemoCategories);
-/* Bobot proporsi tiap kategori, dipakai HANYA untuk memecah Total Pembelian/
-Total Pemakaian di DEMO_DATA menjadi angka per-kategori yang masuk akal untuk
-preview. Data live dari API tidak memakai ini sama sekali. */
-const DEMO_WEIGHTS = {
-"Beras":0.15,"Laukan":0.30,"Sayur":0.15,"Pendamping":0.08,"Buah":0.05,
-"Bumbu":0.10,"Biaya Masak":0.07,"Kemasan":0.06,"Fast-moving Lainnya":0.04
-};
-function withDemoCategories(row){
-CATEGORIES.forEach(k=>{
-row["Pembelian "+k] = Math.round((row["Total Pembelian"]||0) * DEMO_WEIGHTS[k]);
-row["Pemakaian "+k] = Math.round((row["Total Pemakaian"]||0) * DEMO_WEIGHTS[k]);
-});
-return row;
-}
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
-/* Kategori bahan pokok. Setiap kategori diharapkan punya 2 field di data API:
-"Pembelian <Kategori>" dan "Pemakaian <Kategori>" (persis format field yang sudah
-ada seperti "Total Pembelian" / "Total Pemakaian"). Kalau Apps Script belum
-mengirim field ini, section 04 di bawah tetap tampil tapi nilainya 0 — lihat
-catatan integrasi di akhir file. */
-const CATEGORIES = [
-"Beras","Laukan","Sayur","Pendamping","Buah","Bumbu",
-"Biaya Masak","Kemasan","Fast-moving Lainnya"
-];
-const CATEGORY_PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B","#D9A05B","#6E9FA8","#A97CA5"];
 let ALL_ROWS = [];
 let charts = {};
 const rupiah = n => "Rp" + Math.round(n).toLocaleString("id-ID");
