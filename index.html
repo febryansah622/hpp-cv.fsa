@@ -672,9 +672,16 @@ renderKategori(rows);
 Tangsel / Tangkot / Non-reguler, Outlet Kebuli Juni jadi Margonda / Tipar.
 Unit tanpa sub-unit tetap satu batang. Totalnya tidak berubah, hanya
 penyajiannya yang dirinci. */
+/* BUGFIX: dulu pemecahan berlaku juga di tampilan "Semua Unit". Sub-unit
+yang hanya berasal dari log transaksi omsetnya 0 (omset cuma ada di tab
+Rekap), sehingga batang Dapur Situdaun senilai Rp813 juta tergantikan dua
+batang bernilai nol. Sekarang tampilan "Semua Unit" SELALU satu batang per
+unit bisnis - tepat enam - dan pemecahan sub-unit hanya muncul kalau satu
+unit dipilih sendiri. */
+const pecahSubUnit = document.getElementById("filterUnit").value !== "__ALL__";
 const barLabels = [], barOmset = [], barPakai = [];
 rows.forEach(r => {
-const subs = subUntuk(r["Bulan"], r["Unit"]);
+const subs = pecahSubUnit ? subUntuk(r["Bulan"], r["Unit"]) : [];
 if (subs.length >= 2){
 subs.forEach(sub => {
 barLabels.push(sub["Sub Unit"]);
