@@ -428,7 +428,38 @@ DEMO_DATA.forEach(withDemoCategories);
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
 let ALL_ROWS = [];
 let charts = {};
-const rupiah = n => "Rp" + Math.round(n).toLocaleString("id-ID");
+/* ---------------------------------------------------------------------
+BUGFIX "RpNaN": Number("1.234.567") menghasilkan NaN, dan Math.round(NaN)
+dicetak sebagai "RpNaN". Ini terjadi kalau Apps Script mengirim angka
+sebagai TEKS (mis. sel Data Gabungan terformat Plain Text, atau nilainya
+sel error seperti #DIV/0!). Semua pembacaan angka sekarang lewat toNum(),
+yang menerima angka, teks angka polos, maupun format Indonesia
+("1.234.567,89"), dan mengembalikan 0 untuk apa pun yang tidak terbaca -
+sambil mencatat contohnya sekali di console supaya penyebabnya ketahuan.
+--------------------------------------------------------------------- */
+const NILAI_BERMASALAH = new Map();
+function catatNilaiAneh(raw, kunci){
+if (NILAI_BERMASALAH.size > 25) return;
+const sidik = kunci + " => " + typeof raw + " " + JSON.stringify(raw);
+if (NILAI_BERMASALAH.has(sidik)) return;
+NILAI_BERMASALAH.set(sidik, true);
+console.warn("Nilai tidak terbaca sebagai angka:", sidik);
+}
+function toNum(v, kunci){
+if (typeof v === "number") return isFinite(v) ? v : 0;
+if (v === null || v === undefined) return 0;
+let s = String(v).trim();
+if (s === "") return 0;
+if (s.charAt(0) === "#") { catatNilaiAneh(v, kunci||"?"); return 0; } // #DIV/0!, #REF!
+s = s.replace(/rp/gi, "").replace(/\s/g, "");
+// "1.234.567,89" -> titik ribuan, koma desimal
+if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+else if (s.indexOf(",") !== -1 && s.indexOf(".") === -1) s = s.replace(",", ".");
+const n = Number(s);
+if (!isFinite(n)) { catatNilaiAneh(v, kunci||"?"); return 0; }
+return n;
+}
+const rupiah = n => "Rp" + Math.round(toNum(n)).toLocaleString("id-ID");
 const rupiahShort = n => {
 if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1)+"M";
 if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0)+"jt";
@@ -547,9 +578,9 @@ document.getElementById("subHeader").textContent =
 `Menampilkan data ${bulan} · ${rows.length} unit`;
 document.getElementById("footUpdated").textContent =
 "Terakhir dimuat: " + new Date().toLocaleString("id-ID");
-const totalPorsi = rows.reduce((s,r)=>s+Number(r["Total Porsi"]||0),0);
-const totalOmset = rows.reduce((s,r)=>s+Number(r["Total Omset"]||0),0);
-const totalPemakaian = rows.reduce((s,r)=>s+Number(r["Total Pemakaian"]||0),0);
+const totalPorsi = rows.reduce((s,r)=>s+toNum(r["Total Porsi"],"Total Porsi"),0);
+const totalOmset = rows.reduce((s,r)=>s+toNum(r["Total Omset"],"Total Omset"),0);
+const totalPemakaian = rows.reduce((s,r)=>s+toNum(r["Total Pemakaian"],"Total Pemakaian"),0);
 const persen = totalOmset ? (totalPemakaian/totalOmset*100) : 0;
 document.getElementById("kpiPorsi").textContent = totalPorsi.toLocaleString("id-ID");
 document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
@@ -562,12 +593,12 @@ const tbody = document.getElementById("tableBody");
 tbody.innerHTML = rows.map(r => `
 <tr>
 <td>${r["Unit"]}</td>
-<td>${Number(r["Total Porsi"]||0).toLocaleString("id-ID")}</td>
+<td>${toNum(r["Total Porsi"],"Total Porsi").toLocaleString("id-ID")}</td>
 <td>${rupiah(r["Total Omset"]||0)}</td>
 <td>${rupiah(r["Total Pembelian"]||0)}</td>
 <td>${rupiah(r["Total Pemakaian"]||0)}</td>
 <td>${rupiah(r["Stok On Hand"]||0)}</td>
-<td>${pctBadge(Number(r["% Pemakaian/Omset"]||0))}</td>
+<td>${pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"))}</td>
 </tr>
 `).join("");
 renderKategori(rows);
@@ -577,8 +608,8 @@ type: "bar",
 data: {
 labels: rows.map(r=>r["Unit"]),
 datasets: [
-{ label:"Omset", data: rows.map(r=>r["Total Omset"]), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
-{ label:"Pemakaian", data: rows.map(r=>r["Total Pemakaian"]), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
+{ label:"Omset", data: rows.map(r=>toNum(r["Total Omset"],"Total Omset")), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
+{ label:"Pemakaian", data: rows.map(r=>toNum(r["Total Pemakaian"],"Total Pemakaian")), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
 ]
 },
 options: {
@@ -595,7 +626,7 @@ makeChart("donut", "chartDonut", {
 type: "doughnut",
 data: {
 labels: rows.map(r=>r["Unit"]),
-datasets: [{ data: rows.map(r=>r["Total Omset"]), backgroundColor: PALETTE, borderColor:"#1B1F27", borderWidth:2 }]
+datasets: [{ data: rows.map(r=>toNum(r["Total Omset"],"Total Omset")), backgroundColor: PALETTE, borderColor:"#1B1F27", borderWidth:2 }]
 },
 options: {
 responsive:true,
@@ -603,8 +634,8 @@ plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IB
 }
 });
 // ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
-const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Omset Pekan "+k]||0),0));
-const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Pemakaian Pekan "+k]||0),0));
+const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+toNum(r["Omset Pekan "+k],"Omset Pekan "+k),0));
+const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+toNum(r["Pemakaian Pekan "+k],"Pemakaian Pekan "+k),0));
 makeChart("line", "chartLine", {
 type: "line",
 data: {
@@ -624,6 +655,30 @@ y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=
 }
 });
 }
+/* Diagnostik section 04. Membedakan tiga sebab yang tampak mirip di layar:
+   (a) kolomnya tidak ada sama sekali di Data Gabungan
+   (b) kolomnya ada tapi isinya teks/error -> inilah penyebab "RpNaN"
+   (c) kolomnya ada dan angkanya memang nol
+   Hasilnya dicetak ke console (F12) dengan nilai mentahnya. */
+function periksaKolomKategori(rows){
+if (!rows.length){ console.warn("Section 04: tidak ada baris data sama sekali."); return; }
+const contoh = rows[0];
+const hilang = [], teks = [], angka = [];
+CATEGORIES.forEach(k=>{
+const kunci = "Pembelian " + k;
+if (!(kunci in contoh)) { hilang.push(k); return; }
+const v = contoh[kunci];
+if (typeof v === "number" || v === "" || v === null) angka.push(k);
+else teks.push(k + "=" + JSON.stringify(v));
+});
+console.log("Section 04 — memeriksa baris pertama (" + contoh["Unit"] + ", " + contoh["Bulan"] + ")");
+if (hilang.length) console.warn("  Kolom TIDAK ADA di Data Gabungan:", hilang.join(", "),
+"\n  -> jalankan tarikSemuaData() dengan Code.gs v6, lalu Deploy > Manage deployments > New version.");
+if (teks.length) console.warn("  Kolom ada tapi nilainya BUKAN angka (ini penyebab RpNaN):", teks.join(" | "),
+"\n  -> di Data Gabungan, blok kolom kategori kemungkinan terformat Plain Text. Format > Number > Automatic, lalu jalankan ulang tarikSemuaData().");
+if (!hilang.length && !teks.length) console.log("  Semua kolom kategori ada dan bertipe angka.");
+console.log("  Daftar kolom yang diterima dari API:", Object.keys(contoh).join(" | "));
+}
 function renderKategori(rows){
 const unitLabel = document.getElementById("filterUnit").value;
 document.getElementById("kategoriSub").textContent =
@@ -633,10 +688,24 @@ unitLabel === "__ALL__"
 
 const totals = CATEGORIES.map(k => ({
 kategori: k,
-pembelian: rows.reduce((s,r)=>s+Number(r["Pembelian "+k]||0),0),
-pemakaian: rows.reduce((s,r)=>s+Number(r["Pemakaian "+k]||0),0)
+pembelian: rows.reduce((s,r)=>s+toNum(r["Pembelian "+k],"Pembelian "+k),0),
+pemakaian: rows.reduce((s,r)=>s+toNum(r["Pemakaian "+k],"Pemakaian "+k),0)
 }));
 const totalPemakaianSemua = totals.reduce((s,t)=>s+t.pemakaian,0);
+const totalPembelianSemua = totals.reduce((s,t)=>s+t.pembelian,0);
+
+/* Kalau semuanya nol, jelaskan sebabnya. Dari keenam sheet unit, hanya
+Dapur Malang yang punya tabel "Detail Fast-moving" berisi kesembilan
+kategori ini; unit lain tidak mencatatnya sama sekali. Tanpa keterangan,
+tabel nol terlihat seperti bug padahal itu memang isi sumbernya. */
+const catatanKategori = document.getElementById("kategoriSub");
+if (!totalPemakaianSemua && !totalPembelianSemua){
+catatanKategori.textContent = (unitLabel === "__ALL__"
+? "Gabungan semua unit — "
+: "Unit: " + unitLabel + " — ") +
+"tidak ada rincian kategori di sheet sumber untuk pilihan ini. " +
+"Saat ini hanya Dapur Malang yang mencatat tabel Detail Fast-moving.";
+}
 
 // urutkan dari pemakaian terbesar supaya kategori paling signifikan ada di atas
 totals.sort((a,b)=>b.pemakaian - a.pemakaian);
@@ -691,6 +760,7 @@ note.textContent =
 }
 
 ALL_ROWS = await loadData();
+periksaKolomKategori(ALL_ROWS);
 if (ALL_ROWS.length){
 populateFilters(ALL_ROWS);
 render();
