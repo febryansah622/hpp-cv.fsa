@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -7,504 +6,583 @@
 <title>Rekap HPP — CV. FSA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <style>
-  :root{
-    --ink:#12151A;
-    --surface:#1B1F27;
-    --surface-raised:#232833;
-    --divider:#2E323C;
-    --copper:#C68B46;
-    --copper-soft:#3A2E1E;
-    --sage:#7BA893;
-    --sage-soft:#1E2B26;
-    --rust:#C1573B;
-    --rust-soft:#2E1E1A;
-    --text:#F3EEE3;
-    --text-muted:#8D8B84;
-    --text-faint:#5C5A54;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--ink);
-    color:var(--text);
-    font-family:'Inter',sans-serif;
-    -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-  }
-  .mono{font-family:'IBM Plex Mono',monospace;}
-  .serif{font-family:'Fraunces',serif;}
-
-  /* ===== Layout shell ===== */
-  .wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px;}
-
-  /* ===== Header ===== */
-  header{
-    padding:36px 0 28px;
-    border-bottom:1px solid var(--divider);
-    margin-bottom:32px;
-    display:flex;
-    flex-wrap:wrap;
-    gap:24px;
-    justify-content:space-between;
-    align-items:flex-end;
-  }
-  .eyebrow{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:11px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--copper);
-    margin:0 0 10px;
-  }
-  h1{
-    font-family:'Fraunces',serif;
-    font-optical-sizing:auto;
-    font-weight:600;
-    font-size:38px;
-    line-height:1.05;
-    margin:0;
-    letter-spacing:-.01em;
-  }
-  .sub{color:var(--text-muted);font-size:13px;margin-top:8px;}
-
-  .filters{display:flex;gap:10px;flex-wrap:wrap;}
-  select{
-    background:var(--surface-raised);
-    border:1px solid var(--divider);
-    color:var(--text);
-    font-family:'IBM Plex Mono',monospace;
-    font-size:12.5px;
-    padding:10px 14px;
-    border-radius:7px;
-    cursor:pointer;
-    appearance:none;
-    min-width:150px;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238D8B84'/></svg>");
-    background-repeat:no-repeat;
-    background-position:right 12px center;
-  }
-  select:focus{outline:2px solid var(--copper);outline-offset:1px;}
-
-  /* ===== KPI receipt-stub cards ===== */
-  .kpi-row{
-    display:grid;
-    grid-template-columns:repeat(4,1fr);
-    gap:18px;
-    margin-bottom:40px;
-  }
-  .kpi{
-    position:relative;
-    background:var(--surface);
-    border:1px solid var(--divider);
-    border-radius:4px;
-    padding:22px 20px 20px;
-    overflow:hidden;
-  }
-  .kpi::before{
-    content:"";
-    position:absolute;
-    top:0;left:0;right:0;height:5px;
-    background-image:radial-gradient(circle at 8px 2px, var(--ink) 3px, transparent 3.5px);
-    background-size:16px 5px;
-    background-repeat:repeat-x;
-  }
-  .kpi .lbl{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    letter-spacing:.1em;
-    text-transform:uppercase;
-    color:var(--text-muted);
-    margin:6px 0 12px;
-  }
-  .kpi .val{
-    font-family:'IBM Plex Mono',monospace;
-    font-size:26px;
-    font-weight:600;
-    color:var(--text);
-    white-space:nowrap;
-  }
-  .kpi.copper .val{color:var(--copper);}
-  .kpi.sage .val{color:var(--sage);}
-  .kpi.rust .val{color:var(--rust);}
-  .kpi .delta{font-size:11px;color:var(--text-faint);margin-top:6px;}
-
-  /* ===== Section headers ===== */
-  .section-hd{
-    display:flex;align-items:baseline;gap:12px;
-    margin:8px 0 16px;
-  }
-  .section-hd .num{font-family:'IBM Plex Mono',monospace;color:var(--copper);font-size:12px;}
-  .section-hd h2{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
-
-  /* ===== Chart grid ===== */
-  .chart-grid{
-    display:grid;
-    grid-template-columns:1.3fr 1fr;
-    gap:18px;
-    margin-bottom:18px;
-  }
-  .panel{
-    background:var(--surface);
-    border:1px solid var(--divider);
-    border-radius:8px;
-    padding:20px;
-  }
-  .panel h3{
-    font-family:'Inter',sans-serif;
-    font-size:12.5px;
-    font-weight:600;
-    color:var(--text-muted);
-    text-transform:uppercase;
-    letter-spacing:.06em;
-    margin:0 0 14px;
-  }
-  .panel canvas{max-height:260px;}
-  .panel.wide canvas{max-height:280px;}
-
-  /* ===== Ledger table ===== */
-  table{width:100%;border-collapse:collapse;margin-top:6px;}
-  thead th{
-    text-align:right;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    letter-spacing:.06em;
-    text-transform:uppercase;
-    color:var(--text-muted);
-    padding:10px 12px;
-    border-bottom:1px solid var(--divider);
-  }
-  thead th:first-child{text-align:left;}
-  tbody td{
-    padding:12px;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:13px;
-    text-align:right;
-    border-bottom:1px solid var(--divider);
-  }
-  tbody td:first-child{
-    text-align:left;
-    font-family:'Fraunces',serif;
-    font-weight:500;
-    font-size:14px;
-  }
-  tbody tr:nth-child(even){background:rgba(255,255,255,.02);}
-  .badge{
-    display:inline-block;
-    font-family:'IBM Plex Mono',monospace;
-    font-size:10.5px;
-    padding:2px 8px;
-    border-radius:20px;
-  }
-  .badge.high{background:var(--rust-soft);color:var(--rust);}
-  .badge.ok{background:var(--sage-soft);color:var(--sage);}
-  .badge.mid{background:var(--copper-soft);color:var(--copper);}
-
-  footer{
-    margin-top:40px;
-    padding-top:20px;
-    border-top:1px solid var(--divider);
-    color:var(--text-faint);
-    font-size:11.5px;
-    font-family:'IBM Plex Mono',monospace;
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
-  }
-
-  .empty-note{
-    background:var(--copper-soft);
-    border:1px solid var(--copper);
-    color:var(--copper);
-    font-size:12px;
-    font-family:'IBM Plex Mono',monospace;
-    padding:10px 14px;
-    border-radius:6px;
-    margin-bottom:24px;
-  }
-
-  @media (max-width:860px){
-    .kpi-row{grid-template-columns:repeat(2,1fr);}
-    .chart-grid{grid-template-columns:1fr;}
-    thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
-  }
-
-  ::selection{background:var(--copper);color:var(--ink);}
-  :focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
+:root{
+--ink:#12151A;
+--surface:#1B1F27;
+--surface-raised:#232833;
+--divider:#2E323C;
+--copper:#C68B46;
+--copper-soft:#3A2E1E;
+--sage:#7BA893;
+--sage-soft:#1E2B26;
+--rust:#C1573B;
+--rust-soft:#2E1E1A;
+--text:#F3EEE3;
+--text-muted:#8D8B84;
+--text-faint:#5C5A54;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+background:var(--ink);
+color:var(--text);
+font-family:'Inter',sans-serif;
+-webkit-font-smoothing:antialiased;
+min-height:100vh;
+}
+.mono{font-family:'IBM Plex Mono',monospace;}
+.serif{font-family:'Fraunces',serif;}
+/* ===== Layout shell ===== */
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px;}
+/* ===== Header ===== */
+header{
+padding:36px 0 28px;
+border-bottom:1px solid var(--divider);
+margin-bottom:32px;
+display:flex;
+flex-wrap:wrap;
+gap:24px;
+justify-content:space-between;
+align-items:flex-end;
+}
+.eyebrow{
+font-family:'IBM Plex Mono',monospace;
+font-size:11px;
+letter-spacing:.16em;
+text-transform:uppercase;
+color:var(--copper);
+margin:0 0 10px;
+}
+h1{
+font-family:'Fraunces',serif;
+font-optical-sizing:auto;
+font-weight:600;
+font-size:38px;
+line-height:1.05;
+margin:0;
+letter-spacing:-.01em;
+}
+.sub{color:var(--text-muted);font-size:13px;margin-top:8px;}
+.filters{display:flex;gap:10px;flex-wrap:wrap;}
+select{
+background:var(--surface-raised);
+border:1px solid var(--divider);
+color:var(--text);
+font-family:'IBM Plex Mono',monospace;
+font-size:12.5px;
+padding:10px 14px;
+border-radius:7px;
+cursor:pointer;
+appearance:none;
+min-width:150px;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238D8B84'/></svg>");
+background-repeat:no-repeat;
+background-position:right 12px center;
+}
+select:focus{outline:2px solid var(--copper);outline-offset:1px;}
+/* ===== KPI receipt-stub cards ===== */
+.kpi-row{
+display:grid;
+grid-template-columns:repeat(4,1fr);
+gap:18px;
+margin-bottom:40px;
+}
+.kpi{
+position:relative;
+background:var(--surface);
+border:1px solid var(--divider);
+border-radius:4px;
+padding:22px 20px 20px;
+overflow:hidden;
+}
+.kpi::before{
+content:"";
+position:absolute;
+top:0;left:0;right:0;height:5px;
+background-image:radial-gradient(circle at 8px 2px, var(--ink) 3px, transparent 3.5px);
+background-size:16px 5px;
+background-repeat:repeat-x;
+}
+.kpi .lbl{
+font-family:'IBM Plex Mono',monospace;
+font-size:10.5px;
+letter-spacing:.1em;
+text-transform:uppercase;
+color:var(--text-muted);
+margin:6px 0 12px;
+}
+.kpi .val{
+font-family:'IBM Plex Mono',monospace;
+font-size:26px;
+font-weight:600;
+color:var(--text);
+white-space:nowrap;
+}
+.kpi.copper .val{color:var(--copper);}
+.kpi.sage .val{color:var(--sage);}
+.kpi.rust .val{color:var(--rust);}
+.kpi .delta{font-size:11px;color:var(--text-faint);margin-top:6px;}
+/* ===== Section headers ===== */
+.section-hd{
+display:flex;align-items:baseline;gap:12px;
+margin:8px 0 16px;
+}
+.section-hd .num{font-family:'IBM Plex Mono',monospace;color:var(--copper);font-size:12px;}
+.section-hd h2{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
+/* ===== Chart grid ===== */
+.chart-grid{
+display:grid;
+grid-template-columns:1.3fr 1fr;
+gap:18px;
+margin-bottom:18px;
+}
+.panel{
+background:var(--surface);
+border:1px solid var(--divider);
+border-radius:8px;
+padding:20px;
+}
+.panel h3{
+font-family:'Inter',sans-serif;
+font-size:12.5px;
+font-weight:600;
+color:var(--text-muted);
+text-transform:uppercase;
+letter-spacing:.06em;
+margin:0 0 14px;
+}
+.panel canvas{max-height:260px;}
+.panel.wide canvas{max-height:280px;}
+.panel.kategori canvas{max-height:420px;}
+/* ===== Ledger table ===== */
+table{width:100%;border-collapse:collapse;margin-top:6px;}
+thead th{
+text-align:right;
+font-family:'IBM Plex Mono',monospace;
+font-size:10.5px;
+letter-spacing:.06em;
+text-transform:uppercase;
+color:var(--text-muted);
+padding:10px 12px;
+border-bottom:1px solid var(--divider);
+}
+thead th:first-child{text-align:left;}
+tbody td{
+padding:12px;
+font-family:'IBM Plex Mono',monospace;
+font-size:13px;
+text-align:right;
+border-bottom:1px solid var(--divider);
+}
+tbody td:first-child{
+text-align:left;
+font-family:'Fraunces',serif;
+font-weight:500;
+font-size:14px;
+}
+tbody tr:nth-child(even){background:rgba(255,255,255,.02);}
+.badge{
+display:inline-block;
+font-family:'IBM Plex Mono',monospace;
+font-size:10.5px;
+padding:2px 8px;
+border-radius:20px;
+}
+.badge.high{background:var(--rust-soft);color:var(--rust);}
+.badge.ok{background:var(--sage-soft);color:var(--sage);}
+.badge.mid{background:var(--copper-soft);color:var(--copper);}
+footer{
+margin-top:40px;
+padding-top:20px;
+border-top:1px solid var(--divider);
+color:var(--text-faint);
+font-size:11.5px;
+font-family:'IBM Plex Mono',monospace;
+display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.empty-note{
+background:var(--copper-soft);
+border:1px solid var(--copper);
+color:var(--copper);
+font-size:12px;
+font-family:'IBM Plex Mono',monospace;
+padding:10px 14px;
+border-radius:6px;
+margin-bottom:24px;
+}
+@media (max-width:860px){
+.kpi-row{grid-template-columns:repeat(2,1fr);}
+.chart-grid{grid-template-columns:1fr;}
+thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
+}
+::selection{background:var(--copper);color:var(--ink);}
+:focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
 </style>
 </head>
 <body>
 <div class="wrap">
-
-  <header>
-    <div>
-      <p class="eyebrow">CV. FSA · Operasional Dapur &amp; Outlet</p>
-      <h1>Rekap HPP</h1>
-      <p class="sub" id="subHeader">Memuat data…</p>
-    </div>
-    <div class="filters">
-      <select id="filterBulan"></select>
-      <select id="filterUnit"></select>
-    </div>
-  </header>
-
-  <div id="emptyNote" class="empty-note" style="display:none;"></div>
-
-  <div class="kpi-row">
-    <div class="kpi">
-      <p class="lbl">Total Porsi</p>
-      <p class="val mono" id="kpiPorsi">–</p>
-    </div>
-    <div class="kpi copper">
-      <p class="lbl">Total Omset</p>
-      <p class="val mono" id="kpiOmset">–</p>
-    </div>
-    <div class="kpi rust">
-      <p class="lbl">Total Pemakaian</p>
-      <p class="val mono" id="kpiPemakaian">–</p>
-    </div>
-    <div class="kpi" id="kpiPersenCard">
-      <p class="lbl">Pemakaian / Omset</p>
-      <p class="val mono" id="kpiPersen">–</p>
-    </div>
-  </div>
-
-  <div class="section-hd"><span class="num">01</span><h2>Perbandingan Antar Unit</h2></div>
-  <div class="chart-grid">
-    <div class="panel">
-      <h3>Omset vs Pemakaian per Unit</h3>
-      <canvas id="chartBar"></canvas>
-    </div>
-    <div class="panel">
-      <h3>Distribusi Omset</h3>
-      <canvas id="chartDonut"></canvas>
-    </div>
-  </div>
-
-  <div class="section-hd"><span class="num">02</span><h2>Tren Mingguan</h2></div>
-  <div class="panel wide" style="margin-bottom:32px;">
-    <h3>Omset vs Pemakaian per Pekan</h3>
-    <canvas id="chartLine"></canvas>
-  </div>
-
-  <div class="section-hd"><span class="num">03</span><h2>Rincian per Unit</h2></div>
-  <div class="panel">
-    <table>
-      <thead>
-        <tr>
-          <th>Unit</th>
-          <th>Porsi</th>
-          <th>Omset</th>
-          <th>Pembelian</th>
-          <th>Pemakaian</th>
-          <th>Stok On Hand</th>
-          <th>% Pemakaian</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-
-  <footer>
-    <span id="footNote">Sumber: Google Sheets dapur, ditarik otomatis via Apps Script</span>
-    <span id="footUpdated"></span>
-  </footer>
-
+<header>
+<div>
+<p class="eyebrow">CV. FSA · Operasional Dapur &amp; Outlet</p>
+<h1>Rekap HPP</h1>
+<p class="sub" id="subHeader">Memuat data…</p>
 </div>
-
+<div class="filters">
+<select id="filterBulan"></select>
+<select id="filterUnit"></select>
+</div>
+</header>
+<div id="emptyNote" class="empty-note" style="display:none;"></div>
+<div class="kpi-row">
+<div class="kpi">
+<p class="lbl">Total Porsi</p>
+<p class="val mono" id="kpiPorsi">–</p>
+</div>
+<div class="kpi copper">
+<p class="lbl">Total Omset</p>
+<p class="val mono" id="kpiOmset">–</p>
+</div>
+<div class="kpi rust">
+<p class="lbl">Total Pemakaian</p>
+<p class="val mono" id="kpiPemakaian">–</p>
+</div>
+<div class="kpi" id="kpiPersenCard">
+<p class="lbl">Pemakaian / Omset</p>
+<p class="val mono" id="kpiPersen">–</p>
+</div>
+</div>
+<div class="section-hd"><span class="num">01</span><h2>Perbandingan Antar Unit</h2></div>
+<div class="chart-grid">
+<div class="panel">
+<h3>Omset vs Pemakaian per Unit</h3>
+<canvas id="chartBar"></canvas>
+</div>
+<div class="panel">
+<h3>Distribusi Omset</h3>
+<canvas id="chartDonut"></canvas>
+</div>
+</div>
+<div class="section-hd"><span class="num">02</span><h2>Tren Mingguan</h2></div>
+<div class="panel wide" style="margin-bottom:32px;">
+<h3>Omset vs Pemakaian per Pekan</h3>
+<canvas id="chartLine"></canvas>
+</div>
+<div class="section-hd"><span class="num">03</span><h2>Rincian per Unit</h2></div>
+<div class="panel">
+<table>
+<thead>
+<tr>
+<th>Unit</th>
+<th>Porsi</th>
+<th>Omset</th>
+<th>Pembelian</th>
+<th>Pemakaian</th>
+<th>Stok On Hand</th>
+<th>% Pemakaian</th>
+</tr>
+</thead>
+<tbody id="tableBody"></tbody>
+</table>
+</div>
+<div class="section-hd"><span class="num">04</span><h2>Rincian Kategori Bahan Pokok</h2></div>
+<p class="sub" id="kategoriSub" style="margin:-8px 0 16px;"></p>
+<div class="panel wide kategori" style="margin-bottom:18px;">
+<h3>Pembelian vs Pemakaian per Kategori</h3>
+<canvas id="chartKategori"></canvas>
+</div>
+<div class="panel" style="margin-bottom:32px;">
+<table>
+<thead>
+<tr>
+<th>Kategori</th>
+<th>Pembelian</th>
+<th>Pemakaian</th>
+<th>Selisih</th>
+<th>% dari Total Pemakaian</th>
+</tr>
+</thead>
+<tbody id="tableKategoriBody"></tbody>
+</table>
+</div>
+<footer>
+<span id="footNote">Sumber: Google Sheets dapur, ditarik otomatis via Apps Script</span>
+<span id="footUpdated"></span>
+</footer>
+</div>
 <script>
 /* ======================================================================
-   KONFIGURASI
-   Ganti API_URL dengan URL Web App hasil deploy Apps Script (Code.gs).
-   Contoh: "https://script.google.com/macros/s/AKfycb.../exec"
-   Selama kosong, halaman ini pakai DATA CONTOH (Juli 2026) untuk preview.
-   ====================================================================== */
-const CONFIG = {
-  API_URL: "https://script.google.com/macros/s/AKfycbzXKD2FDdziEpBulOCFwoyzbE9mDG2LkVUplBNsIOjik2Hg3DZKzdgA2UevuPND6HJhcg/exec"
-};
+KONFIGURASI
+Ganti API_URL dengan URL Web App hasil deploy Apps Script (Code.gs).
+Contoh: "https://script.google.com/macros/s/AKfycb.../exec"
+Selama kosong, halaman ini pakai DATA CONTOH (Juli 2026) untuk preview.
 
+INTEGRASI KATEGORI BAHAN POKOK (section 04):
+Supaya section "Rincian Kategori Bahan Pokok" terisi data asli (bukan 0),
+tiap objek baris yang dikembalikan oleh Web App Apps Script (Code.gs) perlu
+menambahkan 2 field per kategori, persis format field lain yang sudah ada
+("Total Pembelian", "Total Pemakaian", dst):
+"Pembelian Beras", "Pemakaian Beras",
+"Pembelian Laukan", "Pemakaian Laukan",
+"Pembelian Sayur", "Pemakaian Sayur",
+"Pembelian Pendamping", "Pemakaian Pendamping",
+"Pembelian Buah", "Pemakaian Buah",
+"Pembelian Bumbu", "Pemakaian Bumbu",
+"Pembelian Biaya Masak", "Pemakaian Biaya Masak",
+"Pembelian Kemasan", "Pemakaian Kemasan",
+"Pembelian Fast-moving Lainnya", "Pemakaian Fast-moving Lainnya"
+Kalau kolom kategori ini sudah ada di tiap sheet unit tapi Code.gs belum
+menariknya ke Master HPP, itu bagian yang perlu ditambahkan di Apps Script
+(bukan di file HTML ini) — kirim isi Code.gs kalau perlu bantuan itu juga.
+====================================================================== */
+const CONFIG = {
+API_URL: "https://script.google.com/macros/s/AKfycbzXKD2FDdziEpBulOCFwoyzbE9mDG2LkVUplBNsIOjik2Hg3DZKzdgA2UevuPND6HJhcg/exec"
+};
 /* ---------- DATA CONTOH (dipakai kalau API_URL belum diisi) ---------- */
 const DEMO_DATA = [
-  { "Bulan":"Juli 2026","Unit":"Dapur Malang","Total Porsi":22275,"Total Omset":111375000,"Total Pembelian":69614220,"Total Pemakaian":54228410,"% Pemakaian/Omset":48.69,"Stok On Hand":21478754,
-    "Omset Pekan 1":12000000,"Omset Pekan 2":20850000,"Omset Pekan 3":39150000,"Omset Pekan 4":39375000,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":6863500,"Pemakaian Pekan 2":13660037,"Pemakaian Pekan 3":20349161,"Pemakaian Pekan 4":13355712,"Pemakaian Pekan 5":0 },
-  { "Bulan":"Juli 2026","Unit":"Dapur Situdaun","Total Porsi":44677,"Total Omset":294975000,"Total Pembelian":165693243,"Total Pemakaian":158294485,"% Pemakaian/Omset":53.66,"Stok On Hand":102698392,
-    "Omset Pekan 1":43350000,"Omset Pekan 2":104160000,"Omset Pekan 3":147465000,"Omset Pekan 4":0,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":15988700,"Pemakaian Pekan 2":44357429,"Pemakaian Pekan 3":84058356,"Pemakaian Pekan 4":13640000,"Pemakaian Pekan 5":250000 },
-  { "Bulan":"Juli 2026","Unit":"Dapur Depok","Total Porsi":3051,"Total Omset":70117000,"Total Pembelian":82985861,"Total Pemakaian":62623240,"% Pemakaian/Omset":89.31,"Stok On Hand":29396665,
-    "Omset Pekan 1":8029000,"Omset Pekan 2":12577500,"Omset Pekan 3":28260500,"Omset Pekan 4":0,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":11686633,"Pemakaian Pekan 2":6970522,"Pemakaian Pekan 3":25370672,"Pemakaian Pekan 4":16692412,"Pemakaian Pekan 5":1353000 },
-  { "Bulan":"Juli 2026","Unit":"Dapur Tangsel","Total Porsi":4184,"Total Omset":23324000,"Total Pembelian":30885717,"Total Pemakaian":32532415,"% Pemakaian/Omset":139.48,"Stok On Hand":5249842,
-    "Omset Pekan 1":30000,"Omset Pekan 2":4500000,"Omset Pekan 3":3204000,"Omset Pekan 4":15590000,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":0,"Pemakaian Pekan 2":10572200,"Pemakaian Pekan 3":7005610,"Pemakaian Pekan 4":14514211,"Pemakaian Pekan 5":50000 },
-  { "Bulan":"Juli 2026","Unit":"Outlet Kebuli","Total Porsi":419,"Total Omset":10555000,"Total Pembelian":12111929,"Total Pemakaian":5975890,"% Pemakaian/Omset":56.62,"Stok On Hand":6976039,
-    "Omset Pekan 1":3850000,"Omset Pekan 2":1823000,"Omset Pekan 3":4557000,"Omset Pekan 4":325000,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":2299443,"Pemakaian Pekan 2":705050,"Pemakaian Pekan 3":2971398,"Pemakaian Pekan 4":0,"Pemakaian Pekan 5":0 },
-  { "Bulan":"Juli 2026","Unit":"Foodcourt","Total Porsi":1534,"Total Omset":8129000,"Total Pembelian":5146342,"Total Pemakaian":0,"% Pemakaian/Omset":0,"Stok On Hand":5146342,
-    "Omset Pekan 1":0,"Omset Pekan 2":0,"Omset Pekan 3":7031000,"Omset Pekan 4":1098000,"Omset Pekan 5":0,
-    "Pemakaian Pekan 1":0,"Pemakaian Pekan 2":0,"Pemakaian Pekan 3":0,"Pemakaian Pekan 4":0,"Pemakaian Pekan 5":0 }
+{ "Bulan":"Juli 2026","Unit":"Dapur Malang","Total Porsi":22275,"Total Omset":111375000,"Total Pembelian":69614220,"Total Pemakaian":54228410,"% Pemakaian/Omset":48.69,"Stok On Hand":21478754,
+"Omset Pekan 1":12000000,"Omset Pekan 2":20850000,"Omset Pekan 3":39150000,"Omset Pekan 4":39375000,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":6863500,"Pemakaian Pekan 2":13660037,"Pemakaian Pekan 3":20349161,"Pemakaian Pekan 4":13355712,"Pemakaian Pekan 5":0 },
+{ "Bulan":"Juli 2026","Unit":"Dapur Situdaun","Total Porsi":44677,"Total Omset":294975000,"Total Pembelian":165693243,"Total Pemakaian":158294485,"% Pemakaian/Omset":53.66,"Stok On Hand":102698392,
+"Omset Pekan 1":43350000,"Omset Pekan 2":104160000,"Omset Pekan 3":147465000,"Omset Pekan 4":0,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":15988700,"Pemakaian Pekan 2":44357429,"Pemakaian Pekan 3":84058356,"Pemakaian Pekan 4":13640000,"Pemakaian Pekan 5":250000 },
+{ "Bulan":"Juli 2026","Unit":"Dapur Depok","Total Porsi":3051,"Total Omset":70117000,"Total Pembelian":82985861,"Total Pemakaian":62623240,"% Pemakaian/Omset":89.31,"Stok On Hand":29396665,
+"Omset Pekan 1":8029000,"Omset Pekan 2":12577500,"Omset Pekan 3":28260500,"Omset Pekan 4":0,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":11686633,"Pemakaian Pekan 2":6970522,"Pemakaian Pekan 3":25370672,"Pemakaian Pekan 4":16692412,"Pemakaian Pekan 5":1353000 },
+{ "Bulan":"Juli 2026","Unit":"Dapur Tangsel","Total Porsi":4184,"Total Omset":23324000,"Total Pembelian":30885717,"Total Pemakaian":32532415,"% Pemakaian/Omset":139.48,"Stok On Hand":5249842,
+"Omset Pekan 1":30000,"Omset Pekan 2":4500000,"Omset Pekan 3":3204000,"Omset Pekan 4":15590000,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":0,"Pemakaian Pekan 2":10572200,"Pemakaian Pekan 3":7005610,"Pemakaian Pekan 4":14514211,"Pemakaian Pekan 5":50000 },
+{ "Bulan":"Juli 2026","Unit":"Outlet Kebuli","Total Porsi":419,"Total Omset":10555000,"Total Pembelian":12111929,"Total Pemakaian":5975890,"% Pemakaian/Omset":56.62,"Stok On Hand":6976039,
+"Omset Pekan 1":3850000,"Omset Pekan 2":1823000,"Omset Pekan 3":4557000,"Omset Pekan 4":325000,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":2299443,"Pemakaian Pekan 2":705050,"Pemakaian Pekan 3":2971398,"Pemakaian Pekan 4":0,"Pemakaian Pekan 5":0 },
+{ "Bulan":"Juli 2026","Unit":"Foodcourt","Total Porsi":1534,"Total Omset":8129000,"Total Pembelian":5146342,"Total Pemakaian":0,"% Pemakaian/Omset":0,"Stok On Hand":5146342,
+"Omset Pekan 1":0,"Omset Pekan 2":0,"Omset Pekan 3":7031000,"Omset Pekan 4":1098000,"Omset Pekan 5":0,
+"Pemakaian Pekan 1":0,"Pemakaian Pekan 2":0,"Pemakaian Pekan 3":0,"Pemakaian Pekan 4":0,"Pemakaian Pekan 5":0 }
 ];
-
+DEMO_DATA.forEach(withDemoCategories);
+/* Bobot proporsi tiap kategori, dipakai HANYA untuk memecah Total Pembelian/
+Total Pemakaian di DEMO_DATA menjadi angka per-kategori yang masuk akal untuk
+preview. Data live dari API tidak memakai ini sama sekali. */
+const DEMO_WEIGHTS = {
+"Beras":0.15,"Laukan":0.30,"Sayur":0.15,"Pendamping":0.08,"Buah":0.05,
+"Bumbu":0.10,"Biaya Masak":0.07,"Kemasan":0.06,"Fast-moving Lainnya":0.04
+};
+function withDemoCategories(row){
+CATEGORIES.forEach(k=>{
+row["Pembelian "+k] = Math.round((row["Total Pembelian"]||0) * DEMO_WEIGHTS[k]);
+row["Pemakaian "+k] = Math.round((row["Total Pemakaian"]||0) * DEMO_WEIGHTS[k]);
+});
+return row;
+}
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
-
+/* Kategori bahan pokok. Setiap kategori diharapkan punya 2 field di data API:
+"Pembelian <Kategori>" dan "Pemakaian <Kategori>" (persis format field yang sudah
+ada seperti "Total Pembelian" / "Total Pemakaian"). Kalau Apps Script belum
+mengirim field ini, section 04 di bawah tetap tampil tapi nilainya 0 — lihat
+catatan integrasi di akhir file. */
+const CATEGORIES = [
+"Beras","Laukan","Sayur","Pendamping","Buah","Bumbu",
+"Biaya Masak","Kemasan","Fast-moving Lainnya"
+];
+const CATEGORY_PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B","#D9A05B","#6E9FA8","#A97CA5"];
 let ALL_ROWS = [];
 let charts = {};
-
 const rupiah = n => "Rp" + Math.round(n).toLocaleString("id-ID");
 const rupiahShort = n => {
-  if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1)+"M";
-  if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0)+"jt";
-  return n.toLocaleString("id-ID");
+if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1)+"M";
+if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0)+"jt";
+return n.toLocaleString("id-ID");
 };
-
 function pctBadge(p){
-  if (p >= 100) return `<span class="badge high">${p.toFixed(1)}%</span>`;
-  if (p >= 70) return `<span class="badge mid">${p.toFixed(1)}%</span>`;
-  return `<span class="badge ok">${p.toFixed(1)}%</span>`;
+if (p >= 100) return `<span class="badge high">${p.toFixed(1)}%</span>`;
+if (p >= 70) return `<span class="badge mid">${p.toFixed(1)}%</span>`;
+return `<span class="badge ok">${p.toFixed(1)}%</span>`;
 }
-
 async function loadData(){
-  if (!CONFIG.API_URL){
-    document.getElementById("emptyNote").style.display = "block";
-    document.getElementById("emptyNote").textContent =
-      "Menampilkan DATA CONTOH (Juli 2026). Isi CONFIG.API_URL di dalam file ini dengan URL Web App Apps Script untuk data live.";
-    return DEMO_DATA;
-  }
-  try{
-    const res = await fetch(CONFIG.API_URL);
-    const json = await res.json();
-    return json.data || [];
-  } catch(err){
-    document.getElementById("emptyNote").style.display = "block";
-    document.getElementById("emptyNote").textContent =
-      "Gagal mengambil data dari API (" + err.message + "). Menampilkan data contoh.";
-    return DEMO_DATA;
-  }
+if (!CONFIG.API_URL){
+document.getElementById("emptyNote").style.display = "block";
+document.getElementById("emptyNote").textContent =
+"Menampilkan DATA CONTOH (Juli 2026). Isi CONFIG.API_URL di dalam file ini dengan URL Web App Apps Script untuk data live.";
+return DEMO_DATA;
 }
-
+try{
+const res = await fetch(CONFIG.API_URL);
+const json = await res.json();
+return json.data || [];
+} catch(err){
+document.getElementById("emptyNote").style.display = "block";
+document.getElementById("emptyNote").textContent =
+"Gagal mengambil data dari API (" + err.message + "). Menampilkan data contoh.";
+return DEMO_DATA;
+}
+}
 function populateFilters(rows){
-  const bulanSel = document.getElementById("filterBulan");
-  const unitSel = document.getElementById("filterUnit");
-  const bulans = [...new Set(rows.map(r=>r["Bulan"]))];
-  const units = [...new Set(rows.map(r=>r["Unit"]))];
-
-  bulanSel.innerHTML = bulans.map(b=>`<option value="${b}">${b}</option>`).join("");
-  unitSel.innerHTML = `<option value="__ALL__">Semua Unit</option>` +
-    units.map(u=>`<option value="${u}">${u}</option>`).join("");
-
-  bulanSel.value = bulans[bulans.length-1];
-  bulanSel.addEventListener("change", render);
-  unitSel.addEventListener("change", render);
+const bulanSel = document.getElementById("filterBulan");
+const unitSel = document.getElementById("filterUnit");
+const bulans = [...new Set(rows.map(r=>r["Bulan"]))];
+const units = [...new Set(rows.map(r=>r["Unit"]))];
+bulanSel.innerHTML = bulans.map(b=>`<option value="${b}">${b}</option>`).join("");
+unitSel.innerHTML = `<option value="__ALL__">Semua Unit</option>` +
+units.map(u=>`<option value="${u}">${u}</option>`).join("");
+bulanSel.value = bulans[bulans.length-1];
+bulanSel.addEventListener("change", render);
+unitSel.addEventListener("change", render);
 }
-
 function getFiltered(){
-  const bulan = document.getElementById("filterBulan").value;
-  const unit = document.getElementById("filterUnit").value;
-  return ALL_ROWS.filter(r => r["Bulan"] === bulan && (unit === "__ALL__" || r["Unit"] === unit));
+const bulan = document.getElementById("filterBulan").value;
+const unit = document.getElementById("filterUnit").value;
+return ALL_ROWS.filter(r => r["Bulan"] === bulan && (unit === "__ALL__" || r["Unit"] === unit));
 }
-
 function destroyChart(key){ if (charts[key]) { charts[key].destroy(); } }
-
 function render(){
-  const rows = getFiltered();
-  const bulan = document.getElementById("filterBulan").value;
-  document.getElementById("subHeader").textContent =
-    `Menampilkan data ${bulan} · ${rows.length} unit`;
-  document.getElementById("footUpdated").textContent =
-    "Terakhir dimuat: " + new Date().toLocaleString("id-ID");
+const rows = getFiltered();
+const bulan = document.getElementById("filterBulan").value;
+document.getElementById("subHeader").textContent =
+`Menampilkan data ${bulan} · ${rows.length} unit`;
+document.getElementById("footUpdated").textContent =
+"Terakhir dimuat: " + new Date().toLocaleString("id-ID");
+const totalPorsi = rows.reduce((s,r)=>s+Number(r["Total Porsi"]||0),0);
+const totalOmset = rows.reduce((s,r)=>s+Number(r["Total Omset"]||0),0);
+const totalPemakaian = rows.reduce((s,r)=>s+Number(r["Total Pemakaian"]||0),0);
+const persen = totalOmset ? (totalPemakaian/totalOmset*100) : 0;
+document.getElementById("kpiPorsi").textContent = totalPorsi.toLocaleString("id-ID");
+document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
+document.getElementById("kpiPemakaian").textContent = rupiah(totalPemakaian);
+document.getElementById("kpiPersen").textContent = persen.toFixed(2)+"%";
+const kpiCard = document.getElementById("kpiPersenCard");
+kpiCard.className = "kpi " + (persen >= 100 ? "rust" : persen >= 70 ? "copper" : "sage");
+// ---- Table ----
+const tbody = document.getElementById("tableBody");
+tbody.innerHTML = rows.map(r => `
+<tr>
+<td>${r["Unit"]}</td>
+<td>${Number(r["Total Porsi"]||0).toLocaleString("id-ID")}</td>
+<td>${rupiah(r["Total Omset"]||0)}</td>
+<td>${rupiah(r["Total Pembelian"]||0)}</td>
+<td>${rupiah(r["Total Pemakaian"]||0)}</td>
+<td>${rupiah(r["Stok On Hand"]||0)}</td>
+<td>${pctBadge(Number(r["% Pemakaian/Omset"]||0))}</td>
+</tr>
+`).join("");
+renderKategori(rows);
+// ---- Bar chart: Omset vs Pemakaian per unit ----
+destroyChart("bar");
+charts.bar = new Chart(document.getElementById("chartBar"), {
+type: "bar",
+data: {
+labels: rows.map(r=>r["Unit"]),
+datasets: [
+{ label:"Omset", data: rows.map(r=>r["Total Omset"]), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
+{ label:"Pemakaian", data: rows.map(r=>r["Total Pemakaian"]), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
+]
+},
+options: {
+responsive:true,
+plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+scales:{
+x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
+y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
+}
+}
+});
+// ---- Donut chart: distribusi omset ----
+destroyChart("donut");
+charts.donut = new Chart(document.getElementById("chartDonut"), {
+type: "doughnut",
+data: {
+labels: rows.map(r=>r["Unit"]),
+datasets: [{ data: rows.map(r=>r["Total Omset"]), backgroundColor: PALETTE, borderColor:"#1B1F27", borderWidth:2 }]
+},
+options: {
+responsive:true,
+plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, boxWidth:10, padding:10 } } }
+}
+});
+// ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
+const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Omset Pekan "+k]||0),0));
+const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Pemakaian Pekan "+k]||0),0));
+destroyChart("line");
+charts.line = new Chart(document.getElementById("chartLine"), {
+type: "line",
+data: {
+labels: ["Pekan 1","Pekan 2","Pekan 3","Pekan 4","Pekan 5*"],
+datasets: [
+{ label:"Omset", data: omsetPerPekan, borderColor:"#7BA893", backgroundColor:"#7BA89333", tension:.3, pointRadius:4, fill:true },
+{ label:"Pemakaian", data: pemakaianPerPekan, borderColor:"#C1573B", backgroundColor:"#C1573B22", tension:.3, pointRadius:4, fill:true, borderDash:[5,4] }
+]
+},
+options: {
+responsive:true,
+plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+scales:{
+x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
+y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
+}
+}
+});
+}
+function renderKategori(rows){
+const unitLabel = document.getElementById("filterUnit").value;
+document.getElementById("kategoriSub").textContent =
+unitLabel === "__ALL__"
+? "Gabungan semua unit pada bulan terpilih"
+: `Unit: ${unitLabel}`;
 
-  const totalPorsi = rows.reduce((s,r)=>s+Number(r["Total Porsi"]||0),0);
-  const totalOmset = rows.reduce((s,r)=>s+Number(r["Total Omset"]||0),0);
-  const totalPemakaian = rows.reduce((s,r)=>s+Number(r["Total Pemakaian"]||0),0);
-  const persen = totalOmset ? (totalPemakaian/totalOmset*100) : 0;
+const totals = CATEGORIES.map(k => ({
+kategori: k,
+pembelian: rows.reduce((s,r)=>s+Number(r["Pembelian "+k]||0),0),
+pemakaian: rows.reduce((s,r)=>s+Number(r["Pemakaian "+k]||0),0)
+}));
+const totalPemakaianSemua = totals.reduce((s,t)=>s+t.pemakaian,0);
 
-  document.getElementById("kpiPorsi").textContent = totalPorsi.toLocaleString("id-ID");
-  document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
-  document.getElementById("kpiPemakaian").textContent = rupiah(totalPemakaian);
-  document.getElementById("kpiPersen").textContent = persen.toFixed(2)+"%";
+// urutkan dari pemakaian terbesar supaya kategori paling signifikan ada di atas
+totals.sort((a,b)=>b.pemakaian - a.pemakaian);
 
-  const kpiCard = document.getElementById("kpiPersenCard");
-  kpiCard.className = "kpi " + (persen >= 100 ? "rust" : persen >= 70 ? "copper" : "sage");
+// ---- Tabel ----
+const tbody = document.getElementById("tableKategoriBody");
+tbody.innerHTML = totals.map(t => {
+const selisih = t.pembelian - t.pemakaian;
+const share = totalPemakaianSemua ? (t.pemakaian/totalPemakaianSemua*100) : 0;
+return `
+<tr>
+<td>${t.kategori}</td>
+<td>${rupiah(t.pembelian)}</td>
+<td>${rupiah(t.pemakaian)}</td>
+<td style="color:${selisih<0 ? 'var(--rust)' : 'var(--text)'}">${rupiah(selisih)}</td>
+<td>${pctBadge(share)}</td>
+</tr>`;
+}).join("");
 
-  // ---- Table ----
-  const tbody = document.getElementById("tableBody");
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${r["Unit"]}</td>
-      <td>${Number(r["Total Porsi"]||0).toLocaleString("id-ID")}</td>
-      <td>${rupiah(r["Total Omset"]||0)}</td>
-      <td>${rupiah(r["Total Pembelian"]||0)}</td>
-      <td>${rupiah(r["Total Pemakaian"]||0)}</td>
-      <td>${rupiah(r["Stok On Hand"]||0)}</td>
-      <td>${pctBadge(Number(r["% Pemakaian/Omset"]||0))}</td>
-    </tr>
-  `).join("");
-
-  // ---- Bar chart: Omset vs Pemakaian per unit ----
-  destroyChart("bar");
-  charts.bar = new Chart(document.getElementById("chartBar"), {
-    type: "bar",
-    data: {
-      labels: rows.map(r=>r["Unit"]),
-      datasets: [
-        { label:"Omset", data: rows.map(r=>r["Total Omset"]), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:28 },
-        { label:"Pemakaian", data: rows.map(r=>r["Total Pemakaian"]), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:28 }
-      ]
-    },
-    options: {
-      responsive:true,
-      plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
-      scales:{
-        x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
-        y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
-      }
-    }
-  });
-
-  // ---- Donut chart: distribusi omset ----
-  destroyChart("donut");
-  charts.donut = new Chart(document.getElementById("chartDonut"), {
-    type: "doughnut",
-    data: {
-      labels: rows.map(r=>r["Unit"]),
-      datasets: [{ data: rows.map(r=>r["Total Omset"]), backgroundColor: PALETTE, borderColor:"#1B1F27", borderWidth:2 }]
-    },
-    options: {
-      responsive:true,
-      plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, boxWidth:10, padding:10 } } }
-    }
-  });
-
-  // ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
-  const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Omset Pekan "+k]||0),0));
-  const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Pemakaian Pekan "+k]||0),0));
-
-  destroyChart("line");
-  charts.line = new Chart(document.getElementById("chartLine"), {
-    type: "line",
-    data: {
-      labels: ["Pekan 1","Pekan 2","Pekan 3","Pekan 4","Pekan 5*"],
-      datasets: [
-        { label:"Omset", data: omsetPerPekan, borderColor:"#7BA893", backgroundColor:"#7BA89333", tension:.3, pointRadius:4, fill:true },
-        { label:"Pemakaian", data: pemakaianPerPekan, borderColor:"#C1573B", backgroundColor:"#C1573B22", tension:.3, pointRadius:4, fill:true, borderDash:[5,4] }
-      ]
-    },
-    options: {
-      responsive:true,
-      plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
-      scales:{
-        x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
-        y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
-      }
-    }
-  });
+// ---- Chart: horizontal bar, Pembelian vs Pemakaian per kategori ----
+destroyChart("kategori");
+charts.kategori = new Chart(document.getElementById("chartKategori"), {
+type: "bar",
+data: {
+labels: totals.map(t=>t.kategori),
+datasets: [
+{ label:"Pembelian", data: totals.map(t=>t.pembelian), backgroundColor:"#7BA893", borderRadius:4, maxBarThickness:18 },
+{ label:"Pemakaian", data: totals.map(t=>t.pemakaian), backgroundColor:"#C1573B", borderRadius:4, maxBarThickness:18 }
+]
+},
+options: {
+indexAxis: "y",
+responsive:true,
+plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+scales:{
+x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } },
+y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10.5} }, grid:{ display:false } }
+}
+}
+});
 }
 
 (async function init(){
-  ALL_ROWS = await loadData();
-  if (ALL_ROWS.length){
-    populateFilters(ALL_ROWS);
-    render();
-  }
+ALL_ROWS = await loadData();
+if (ALL_ROWS.length){
+populateFilters(ALL_ROWS);
+render();
+}
 })();
 </script>
 </body>
