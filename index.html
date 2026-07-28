@@ -437,6 +437,23 @@ const unit = document.getElementById("filterUnit").value;
 return ALL_ROWS.filter(r => r["Bulan"] === bulan && (unit === "__ALL__" || r["Unit"] === unit));
 }
 function destroyChart(key){ if (charts[key]) { charts[key].destroy(); } }
+/* Bungkus pembuatan tiap chart supaya kalau satu chart gagal (mis. canvas
+tidak ketemu, atau Chart.js belum sempat load), chart-chart lain TETAP
+lanjut dibuat - tidak ikut berhenti semua seperti sebelumnya. Errornya
+tetap dicatat di console (F12 → Console) supaya gampang didiagnosis. */
+function makeChart(key, canvasId, config){
+const canvas = document.getElementById(canvasId);
+if (!canvas){
+console.error(`Chart "${key}" gagal: elemen <canvas id="${canvasId}"> tidak ditemukan di HTML.`);
+return;
+}
+destroyChart(key);
+try{
+charts[key] = new Chart(canvas, config);
+} catch(err){
+console.error(`Chart "${key}" gagal dibuat:`, err);
+}
+}
 function render(){
 const rows = getFiltered();
 const bulan = document.getElementById("filterBulan").value;
@@ -469,8 +486,7 @@ tbody.innerHTML = rows.map(r => `
 `).join("");
 renderKategori(rows);
 // ---- Bar chart: Omset vs Pemakaian per unit ----
-destroyChart("bar");
-charts.bar = new Chart(document.getElementById("chartBar"), {
+makeChart("bar", "chartBar", {
 type: "bar",
 data: {
 labels: rows.map(r=>r["Unit"]),
@@ -489,8 +505,7 @@ y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=
 }
 });
 // ---- Donut chart: distribusi omset ----
-destroyChart("donut");
-charts.donut = new Chart(document.getElementById("chartDonut"), {
+makeChart("donut", "chartDonut", {
 type: "doughnut",
 data: {
 labels: rows.map(r=>r["Unit"]),
@@ -504,8 +519,7 @@ plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IB
 // ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
 const omsetPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Omset Pekan "+k]||0),0));
 const pemakaianPerPekan = [1,2,3,4,5].map(k => rows.reduce((s,r)=>s+Number(r["Pemakaian Pekan "+k]||0),0));
-destroyChart("line");
-charts.line = new Chart(document.getElementById("chartLine"), {
+makeChart("line", "chartLine", {
 type: "line",
 data: {
 labels: ["Pekan 1","Pekan 2","Pekan 3","Pekan 4","Pekan 5*"],
@@ -557,8 +571,7 @@ return `
 }).join("");
 
 // ---- Chart: horizontal bar, Pembelian vs Pemakaian per kategori ----
-destroyChart("kategori");
-charts.kategori = new Chart(document.getElementById("chartKategori"), {
+makeChart("kategori", "chartKategori", {
 type: "bar",
 data: {
 labels: totals.map(t=>t.kategori),
