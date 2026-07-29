@@ -5,6 +5,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rekap HPP — CV. FSA</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="logo-fsa-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <!-- Chart.js: dimuat dari salinan LOKAL di repo (vendor/chart.umd.min.js).
@@ -239,6 +241,12 @@ font-size:11.5px;
 font-family:'IBM Plex Mono',monospace;
 display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
 }
+.brand{display:flex;align-items:center;gap:16px;}
+.brand .logo{
+width:58px;height:58px;flex:none;object-fit:contain;
+filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
+@media(max-width:640px){ .brand .logo{width:44px;height:44px;} }
 .empty-note.bahaya{
 background:var(--rust);
 color:#fff;
@@ -268,10 +276,13 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 <body>
 <div class="wrap">
 <header>
+<div class="brand">
+<img src="logo-fsa-mark.png" alt="Faluzaj Saeco Asmaradana" class="logo">
 <div>
 <p class="eyebrow">CV. FSA · Operasional Dapur &amp; Outlet</p>
 <h1>Rekap HPP</h1>
 <p class="sub" id="subHeader">Memuat data…</p>
+</div>
 </div>
 <div class="filters">
 <select id="filterBulan"></select>
@@ -292,6 +303,11 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 <div class="kpi rust">
 <p class="lbl">Total Pemakaian</p>
 <p class="val mono" id="kpiPemakaian">–</p>
+</div>
+<div class="kpi sage" id="kpiLabaCard">
+<p class="lbl">Laba Kotor</p>
+<p class="val mono" id="kpiLaba">–</p>
+<p class="lbl" id="kpiLabaSub" style="margin-top:6px;opacity:.75;"></p>
 </div>
 <div class="kpi" id="kpiPersenCard">
 <p class="lbl">Pemakaian / Omset</p>
@@ -351,7 +367,7 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 <div class="section-hd"><span class="num">04</span><h2>Rincian Kategori Bahan Pokok</h2></div>
 <p class="sub" id="kategoriSub" style="margin:-8px 0 16px;"></p>
 <div class="panel wide kategori" style="margin-bottom:18px;">
-<h3>Pembelian vs Pemakaian per Kategori</h3>
+<h3>Stok Awal · Pembelian · Pemakaian per Kategori</h3>
 <canvas id="chartKategori"></canvas>
 </div>
 <div class="panel" style="margin-bottom:32px;">
@@ -359,9 +375,10 @@ thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
 <thead>
 <tr>
 <th>Kategori</th>
+<th>Stok Awal</th>
 <th>Pembelian</th>
 <th>Pemakaian</th>
-<th>Selisih</th>
+<th>Stok Akhir</th>
 <th>% dari Total Pemakaian</th>
 </tr>
 </thead>
@@ -638,6 +655,24 @@ const totalPorsi = rows.reduce((s,r)=>s+toNum(r["Total Porsi"],"Total Porsi"),0)
 const totalOmset = rows.reduce((s,r)=>s+toNum(r["Total Omset"],"Total Omset"),0);
 const totalPemakaian = rows.reduce((s,r)=>s+toNum(r["Total Pemakaian"],"Total Pemakaian"),0);
 const persen = totalOmset ? (totalPemakaian/totalOmset*100) : 0;
+
+/* Unit yang punya omset tapi pemakaiannya NOL bukan unit yang untung 100% -
+   itu unit yang datanya belum diinput PIC-nya. Foodcourt sedang dalam
+   kondisi itu. Tanpa penanda, laba kotornya tampil sebesar seluruh omset
+   dan ikut menaikkan angka gabungan, yang menyesatkan. */
+const belumInput = rows.filter(r =>
+toNum(r["Total Omset"]) > 0 && toNum(r["Total Pemakaian"]) === 0);
+const adaBelumInput = belumInput.length > 0;
+
+const labaKotor = totalOmset - totalPemakaian;
+const marginKotor = totalOmset ? (labaKotor/totalOmset*100) : 0;
+document.getElementById("kpiLaba").textContent = rupiah(labaKotor);
+const kartuLaba = document.getElementById("kpiLabaCard");
+kartuLaba.className = "kpi " + (adaBelumInput ? "copper" : marginKotor >= 100 - TARGET_HPP ? "sage" : "rust");
+document.getElementById("kpiLabaSub").textContent = adaBelumInput
+? "margin " + marginKotor.toFixed(1) + "% · belum final: " +
+  belumInput.map(r=>r["Unit"]).join(", ") + " pemakaiannya belum diinput"
+: "margin " + marginKotor.toFixed(1) + "% · Omset − Pemakaian";
 document.getElementById("kpiPorsi").textContent = totalPorsi.toLocaleString("id-ID");
 document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
 document.getElementById("kpiPemakaian").textContent = rupiah(totalPemakaian);
@@ -662,7 +697,9 @@ tbody.innerHTML = rows.map(r => `
 <td>${rupiah(r["Total Pembelian"]||0)}</td>
 <td>${rupiah(r["Total Pemakaian"]||0)}</td>
 <td>${rupiah(r["Stok On Hand"]||0)}</td>
-<td>${pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"), r["Unit"])}</td>
+<td>${(toNum(r["Total Omset"])>0 && toNum(r["Total Pemakaian"])===0)
+? '<span class="badge" title="Pemakaian belum diinput PIC — persentase dan laba kotor unit ini belum bisa dinilai">belum diinput</span>'
+: pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"), r["Unit"])}</td>
 </tr>
 `).join("");
 renderPekan(rows);
@@ -810,6 +847,7 @@ porsi:a.porsi+b.porsi, omset:a.omset+b.omset, beli:a.beli+b.beli, pakai:a.pakai+
 satu baris gabungan di bawah. */
 const bulanAktif = document.getElementById("filterBulan").value;
 const subs = satuUnit ? subUntuk(bulanAktif, unitLabel) : [];
+let adaPorsiTakDirinci = false;
 if (subs.length >= 2){
 document.getElementById("pekanSub").textContent =
 `Rincian pekanan — ${unitLabel}, dipecah per sub-unit`;
@@ -823,12 +861,24 @@ const pakai = toNum(sub["Pemakaian Pekan "+k]);
 return { k, porsi, omset, beli, pakai, persen: hpp(pakai, omset) };
 });
 const st = b5.reduce((a,b)=>({porsi:a.porsi+b.porsi,omset:a.omset+b.omset,beli:a.beli+b.beli,pakai:a.pakai+b.pakai}),{porsi:0,omset:0,beli:0,pakai:0});
+/* Porsi per sub-unit TIDAK ADA di sebagian sheet sumber. Contohnya Dapur
+Depok: tabel aliran pendapatannya (Catering/Po/Aqiqah) hanya memuat kolom
+omset dan pemakaian - jumlah porsi cuma dicatat sekali untuk seluruh unit
+di tabel Porsi & Omset. Menampilkan "0" di situ menyesatkan, karena
+membaca seperti "nol porsi terjual" padahal artinya "tidak dirinci".
+Jadi kalau seluruh porsi sub-unit ini nol sementara unitnya punya porsi,
+tampilkan tanda pisah. */
+const porsiTakDirinci = st.porsi === 0 && tot.porsi > 0;
+const selPorsi = v => porsiTakDirinci
+  ? '<span style="opacity:.45">–</span>'
+  : v.toLocaleString("id-ID");
+if (porsiTakDirinci) adaPorsiTakDirinci = true;
 html += `<tr style="background:var(--surface-raised);">
 <td colspan="6" style="font-weight:600;letter-spacing:.04em;">${sub["Sub Unit"]}</td></tr>`;
 html += b5.map(b => `
 <tr${(b.porsi||b.omset||b.beli||b.pakai) ? "" : ' style="opacity:.35"'}>
 <td style="padding-left:22px;">Pekan ${b.k}</td>
-<td>${b.porsi.toLocaleString("id-ID")}</td>
+<td>${selPorsi(b.porsi)}</td>
 <td>${rupiah(b.omset)}</td>
 <td>${rupiah(b.beli)}</td>
 <td>${rupiah(b.pakai)}</td>
@@ -836,7 +886,7 @@ html += b5.map(b => `
 </tr>`).join("");
 html += `<tr style="font-weight:600;">
 <td style="padding-left:22px;">Subtotal ${sub["Sub Unit"]}</td>
-<td>${st.porsi.toLocaleString("id-ID")}</td>
+<td>${selPorsi(st.porsi)}</td>
 <td>${rupiah(st.omset)}</td>
 <td>${rupiah(st.beli)}</td>
 <td>${rupiah(st.pakai)}</td>
@@ -852,6 +902,10 @@ html += `<tr style="border-top:2px solid var(--divider);font-weight:700;">
 <td>${isFinite(hpp(tot.pakai,tot.omset)) ? pctBadge(hpp(tot.pakai,tot.omset), unitUntukBadge) : '<span class="badge">–</span>'}</td>
 </tr>`;
 document.getElementById("tablePekanBody").innerHTML = html;
+if (adaPorsiTakDirinci){
+document.getElementById("pekanSub").textContent +=
+" · porsi tidak dirinci per sub-unit di sheet sumber, hanya tersedia sebagai total unit";
+}
 return;
 }
 
@@ -908,18 +962,20 @@ unitLabel === "__ALL__"
 
 const totals = CATEGORIES.map(k => ({
 kategori: k,
+stokAwal:  rows.reduce((s,r)=>s+toNum(r["Stok Awal "+k],"Stok Awal "+k),0),
 pembelian: rows.reduce((s,r)=>s+toNum(r["Pembelian "+k],"Pembelian "+k),0),
 pemakaian: rows.reduce((s,r)=>s+toNum(r["Pemakaian "+k],"Pemakaian "+k),0)
 }));
 const totalPemakaianSemua = totals.reduce((s,t)=>s+t.pemakaian,0);
 const totalPembelianSemua = totals.reduce((s,t)=>s+t.pembelian,0);
+const totalStokAwalSemua  = totals.reduce((s,t)=>s+t.stokAwal,0);
 
 /* Kalau semuanya nol, jelaskan sebabnya. Dari keenam sheet unit, hanya
 Dapur Malang yang punya tabel "Detail Fast-moving" berisi kesembilan
 kategori ini; unit lain tidak mencatatnya sama sekali. Tanpa keterangan,
 tabel nol terlihat seperti bug padahal itu memang isi sumbernya. */
 const catatanKategori = document.getElementById("kategoriSub");
-if (!totalPemakaianSemua && !totalPembelianSemua){
+if (!totalPemakaianSemua && !totalPembelianSemua && !totalStokAwalSemua){
 catatanKategori.textContent = (unitLabel === "__ALL__"
 ? "Gabungan semua unit — "
 : "Unit: " + unitLabel + " — ") +
@@ -933,14 +989,23 @@ totals.sort((a,b)=>b.pemakaian - a.pemakaian);
 // ---- Tabel ----
 const tbody = document.getElementById("tableKategoriBody");
 tbody.innerHTML = totals.map(t => {
-const selisih = t.pembelian - t.pemakaian;
+/* Persamaan persediaan: Stok Awal + Pembelian - Pemakaian = Stok Akhir.
+   Sebelumnya kolom ini berisi Pembelian - Pemakaian saja, yang hampir
+   selalu minus - bukan karena rugi, tapi karena barang yang dipakai
+   sebagian sudah ada sejak awal bulan dan tidak pernah ikut dihitung.
+   Stok akhir yang MINUS sekarang berarti sesuatu: pemakaian melebihi
+   stok awal + pembelian, jadi ada yang belum tercatat. */
+const stokAkhir = t.stokAwal + t.pembelian - t.pemakaian;
 const share = totalPemakaianSemua ? (t.pemakaian/totalPemakaianSemua*100) : 0;
+const judulAkhir = stokAkhir < 0
+? ' title="Pemakaian melebihi stok awal + pembelian — kemungkinan ada pembelian atau stok awal yang belum diinput"' : '';
 return `
 <tr>
 <td>${t.kategori}</td>
+<td>${rupiah(t.stokAwal)}</td>
 <td>${rupiah(t.pembelian)}</td>
 <td>${rupiah(t.pemakaian)}</td>
-<td style="color:${selisih<0 ? 'var(--rust)' : 'var(--text)'}">${rupiah(selisih)}</td>
+<td style="color:${stokAkhir<0 ? 'var(--rust)' : 'var(--text)'}"${judulAkhir}>${rupiah(stokAkhir)}${stokAkhir<0?' ⚠':''}</td>
 <td>${pctBadge(share)}</td>
 </tr>`;
 }).join("");
