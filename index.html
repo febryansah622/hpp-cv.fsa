@@ -46,6 +46,15 @@ window.__chartReady = (function () {
 })();
 </script>
 <style>
+/* ===== Skala tunggal =====
+   Seluruh ukuran di bawah memakai rem. Mengubah --skala akan membesarkan
+   huruf DAN jarak antar elemen sekaligus, jadi tata letaknya tetap seimbang
+   di ukuran berapa pun. Ini yang membuat satu halaman bisa dipakai di ponsel
+   dan di TV ruang meeting tanpa dua versi terpisah. */
+:root{ --skala:16px; }
+html{ font-size:var(--skala); }
+
+/* ===== Tema gelap (bawaan) ===== */
 :root{
 --ink:#12151A;
 --surface:#1B1F27;
@@ -58,9 +67,34 @@ window.__chartReady = (function () {
 --rust:#C1573B;
 --rust-soft:#2E1E1A;
 --text:#F3EEE3;
---text-muted:#8D8B84;
---text-faint:#5C5A54;
+--text-muted:#9C9A92;
+--text-faint:#7E7B73;
+--zebra:rgba(255,255,255,.03);
+--bayang:rgba(0,0,0,.5);
 }
+
+/* ===== Tema terang =====
+   Bukan sekadar warna dibalik. Copper, sage, dan rust digelapkan supaya
+   kontrasnya di latar terang tetap memenuhi ambang keterbacaan - warna yang
+   enak dilihat di latar gelap hampir selalu terlalu pucat di latar terang. */
+html[data-tema="terang"]{
+--ink:#F7F4ED;
+--surface:#FFFFFF;
+--surface-raised:#F1ECE1;
+--divider:#DCD5C7;
+--copper:#8A5A1E;
+--copper-soft:#F6E7D0;
+--sage:#3D6A56;
+--sage-soft:#E2EDE7;
+--rust:#9C3A20;
+--rust-soft:#F8E3DC;
+--text:#1A1D23;
+--text-muted:#57544D;
+--text-faint:#75726A;
+--zebra:rgba(0,0,0,.025);
+--bayang:rgba(0,0,0,.12);
+}
+
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;}
 body{
@@ -69,70 +103,95 @@ color:var(--text);
 font-family:'Inter',sans-serif;
 -webkit-font-smoothing:antialiased;
 min-height:100vh;
+transition:background .18s ease,color .18s ease;
 }
 .mono{font-family:'IBM Plex Mono',monospace;}
 .serif{font-family:'Fraunces',serif;}
-/* ===== Layout shell ===== */
-.wrap{max-width:1180px;margin:0 auto;padding:0 24px 80px;}
+
+/* ===== Kerangka ===== */
+.wrap{max-width:78rem;margin:0 auto;padding:0 1.5rem 5rem;}
+
 /* ===== Header ===== */
 header{
-padding:36px 0 28px;
+padding:2.25rem 0 1.75rem;
 border-bottom:1px solid var(--divider);
-margin-bottom:32px;
+margin-bottom:2rem;
 display:flex;
 flex-wrap:wrap;
-gap:24px;
+gap:1.5rem;
 justify-content:space-between;
 align-items:flex-end;
 }
 .eyebrow{
 font-family:'IBM Plex Mono',monospace;
-font-size:11px;
+font-size:.75rem;
 letter-spacing:.16em;
 text-transform:uppercase;
 color:var(--copper);
-margin:0 0 10px;
+margin:0 0 .625rem;
 }
 h1{
 font-family:'Fraunces',serif;
 font-optical-sizing:auto;
 font-weight:600;
-font-size:38px;
+font-size:2.25rem;
 line-height:1.05;
 margin:0;
 letter-spacing:-.01em;
 }
-.sub{color:var(--text-muted);font-size:13px;margin-top:8px;}
-.filters{display:flex;gap:10px;flex-wrap:wrap;}
+.sub{color:var(--text-muted);font-size:.875rem;margin-top:.5rem;}
+
+/* ===== Kendali ===== */
+.filters{display:flex;gap:.625rem;flex-wrap:wrap;align-items:center;}
 select{
 background:var(--surface-raised);
 border:1px solid var(--divider);
 color:var(--text);
 font-family:'IBM Plex Mono',monospace;
-font-size:12.5px;
-padding:10px 14px;
-border-radius:7px;
+font-size:.875rem;
+padding:.625rem .875rem;
+border-radius:.45rem;
 cursor:pointer;
 appearance:none;
-min-width:150px;
-background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%238D8B84'/></svg>");
+min-width:9.5rem;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23999'/></svg>");
 background-repeat:no-repeat;
-background-position:right 12px center;
+background-position:right .75rem center;
 }
 select:focus{outline:2px solid var(--copper);outline-offset:1px;}
-/* ===== KPI receipt-stub cards ===== */
+
+/* Tombol tema & mode presentasi */
+.tombol{
+background:var(--surface-raised);
+border:1px solid var(--divider);
+color:var(--text);
+font-family:'IBM Plex Mono',monospace;
+font-size:.875rem;
+padding:.625rem .875rem;
+border-radius:.45rem;
+cursor:pointer;
+line-height:1;
+}
+.tombol:hover{border-color:var(--copper);color:var(--copper);}
+.tombol[aria-pressed="true"]{background:var(--copper);color:var(--ink);border-color:var(--copper);}
+.grup-skala{display:none;gap:.3rem;}
+.grup-skala .tombol{min-width:2.6rem;text-align:center;font-weight:600;}
+
+/* ===== Kartu KPI =====
+   auto-fit dipakai supaya jumlah kolom menyesuaikan sendiri saat huruf
+   membesar di mode presentasi - tanpa ini, lima kartu akan berdesakan. */
 .kpi-row{
 display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:18px;
-margin-bottom:40px;
+grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));
+gap:1.125rem;
+margin-bottom:2.5rem;
 }
 .kpi{
 position:relative;
 background:var(--surface);
 border:1px solid var(--divider);
-border-radius:4px;
-padding:22px 20px 20px;
+border-radius:.25rem;
+padding:1.375rem 1.25rem 1.25rem;
 overflow:hidden;
 }
 .kpi::before{
@@ -145,129 +204,164 @@ background-repeat:repeat-x;
 }
 .kpi .lbl{
 font-family:'IBM Plex Mono',monospace;
-font-size:10.5px;
-letter-spacing:.1em;
+font-size:.8rem;
+letter-spacing:.08em;
 text-transform:uppercase;
 color:var(--text-muted);
-margin:6px 0 12px;
+margin:.375rem 0 .75rem;
 }
 .kpi .val{
 font-family:'IBM Plex Mono',monospace;
-font-size:26px;
+font-size:2rem;
 font-weight:600;
 color:var(--text);
 white-space:nowrap;
+line-height:1.1;
 }
 .kpi.copper .val{color:var(--copper);}
 .kpi.sage .val{color:var(--sage);}
 .kpi.rust .val{color:var(--rust);}
-.kpi .delta{font-size:11px;color:var(--text-faint);margin-top:6px;}
-/* ===== Section headers ===== */
-.section-hd{
-display:flex;align-items:baseline;gap:12px;
-margin:8px 0 16px;
-}
-.section-hd .num{font-family:'IBM Plex Mono',monospace;color:var(--copper);font-size:12px;}
-.section-hd h2{font-family:'Fraunces',serif;font-size:18px;font-weight:600;margin:0;}
-/* ===== Chart grid ===== */
-.chart-grid{
-display:grid;
-grid-template-columns:1.3fr 1fr;
-gap:18px;
-margin-bottom:18px;
-}
+.kpi .delta{font-size:.8rem;color:var(--text-faint);margin-top:.375rem;}
+
+/* ===== Judul seksi ===== */
+.section-hd{display:flex;align-items:baseline;gap:.75rem;margin:.5rem 0 1rem;}
+.section-hd .num{font-family:'IBM Plex Mono',monospace;color:var(--copper);font-size:.85rem;}
+.section-hd h2{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:600;margin:0;}
+
+/* ===== Panel & grafik ===== */
+.chart-grid{display:grid;grid-template-columns:1.3fr 1fr;gap:1.125rem;margin-bottom:1.125rem;}
 .panel{
 background:var(--surface);
 border:1px solid var(--divider);
-border-radius:8px;
-padding:20px;
+border-radius:.5rem;
+padding:1.25rem;
 }
 .panel h3{
 font-family:'Inter',sans-serif;
-font-size:12.5px;
+font-size:.875rem;
 font-weight:600;
 color:var(--text-muted);
 text-transform:uppercase;
 letter-spacing:.06em;
-margin:0 0 14px;
+margin:0 0 .875rem;
 }
-.panel canvas{max-height:260px;}
-.panel.wide canvas{max-height:280px;}
-.panel.kategori canvas{max-height:420px;}
-/* ===== Ledger table ===== */
-table{width:100%;border-collapse:collapse;margin-top:6px;}
+.panel canvas{max-height:17rem;}
+.panel.wide canvas{max-height:18rem;}
+.panel.kategori canvas{max-height:26rem;}
+
+/* ===== Tabel =====
+   Di layar sempit tabel digeser mendatar dengan kolom pertama tetap menempel,
+   bukan kolomnya disembunyikan. Menyembunyikan kolom membuat angka hilang
+   tanpa ada tandanya - orang tidak tahu ada yang tidak dia lihat. */
+.panel:has(table){overflow-x:auto;}
+table{width:100%;border-collapse:collapse;margin-top:.375rem;min-width:44rem;}
 thead th{
 text-align:right;
 font-family:'IBM Plex Mono',monospace;
-font-size:10.5px;
-letter-spacing:.06em;
+font-size:.8rem;
+letter-spacing:.05em;
 text-transform:uppercase;
 color:var(--text-muted);
-padding:10px 12px;
+padding:.75rem;
 border-bottom:1px solid var(--divider);
+white-space:nowrap;
 }
 thead th:first-child{text-align:left;}
 tbody td{
-padding:12px;
+padding:.75rem;
 font-family:'IBM Plex Mono',monospace;
-font-size:13px;
+font-size:.95rem;
 text-align:right;
 border-bottom:1px solid var(--divider);
+white-space:nowrap;
 }
 tbody td:first-child{
 text-align:left;
 font-family:'Fraunces',serif;
 font-weight:500;
-font-size:14px;
+font-size:1rem;
 }
-tbody tr:nth-child(even){background:rgba(255,255,255,.02);}
+thead th:first-child,tbody td:first-child{
+position:sticky;left:0;
+background:var(--surface);
+z-index:1;
+}
+tbody tr:nth-child(even){background:var(--zebra);}
+tbody tr:nth-child(even) td:first-child{background:var(--surface-raised);}
+
 .badge{
 display:inline-block;
 font-family:'IBM Plex Mono',monospace;
-font-size:10.5px;
-padding:2px 8px;
+font-size:.8rem;
+padding:.15rem .6rem;
 border-radius:20px;
+font-weight:600;
 }
 .badge.high{background:var(--rust-soft);color:var(--rust);}
 .badge.ok{background:var(--sage-soft);color:var(--sage);}
 .badge.mid{background:var(--copper-soft);color:var(--copper);}
+
 footer{
-margin-top:40px;
-padding-top:20px;
+margin-top:2.5rem;
+padding-top:1.25rem;
 border-top:1px solid var(--divider);
 color:var(--text-faint);
-font-size:11.5px;
+font-size:.8rem;
 font-family:'IBM Plex Mono',monospace;
-display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
 }
-.brand{display:flex;align-items:center;gap:16px;}
+.brand{display:flex;align-items:center;gap:1rem;}
 .brand .logo{
-width:58px;height:58px;flex:none;object-fit:contain;
-filter:drop-shadow(0 2px 6px rgba(0,0,0,.5));
+width:3.6rem;height:3.6rem;flex:none;object-fit:contain;
+filter:drop-shadow(0 2px 6px var(--bayang));
 }
-@media(max-width:640px){ .brand .logo{width:44px;height:44px;} }
+
+.empty-note{
+background:var(--copper-soft);
+border:1px solid var(--copper);
+color:var(--copper);
+font-size:.875rem;
+font-family:'IBM Plex Mono',monospace;
+padding:.75rem 1rem;
+border-radius:.4rem;
+margin-bottom:1.5rem;
+}
 .empty-note.bahaya{
 background:var(--rust);
 color:#fff;
 border-color:var(--rust);
 font-weight:600;
-font-size:13px;
 }
-.empty-note{
-background:var(--copper-soft);
-border:1px solid var(--copper);
-color:var(--copper);
-font-size:12px;
-font-family:'IBM Plex Mono',monospace;
-padding:10px 14px;
-border-radius:6px;
-margin-bottom:24px;
-}
+
+/* ===== MODE PRESENTASI =====
+   Dipakai saat ditayangkan ke TV ruang meeting. Selain membesar lewat
+   --skala, yang sekunder disembunyikan: nomor seksi, footer, dan grafik
+   kategori yang terlalu padat untuk dibaca dari jarak beberapa meter.
+   Padding tepi dilebihkan karena sebagian TV memotong pinggir layar. */
+html[data-presentasi="on"] .wrap{padding:0 2.5rem 3rem;max-width:none;}
+html[data-presentasi="on"] .section-hd .num{display:none;}
+html[data-presentasi="on"] footer{display:none;}
+html[data-presentasi="on"] .panel.kategori{display:none;}
+html[data-presentasi="on"] .kpi .val{font-size:2.4rem;}
+html[data-presentasi="on"] .panel canvas{max-height:15rem;}
+html[data-presentasi="on"] .grup-skala{display:flex;}
+html[data-presentasi="on"] tbody td{padding:.9rem .75rem;}
+
 @media (max-width:860px){
-.kpi-row{grid-template-columns:repeat(2,1fr);}
 .chart-grid{grid-template-columns:1fr;}
-thead th:nth-child(n+4), tbody td:nth-child(n+4){display:none;}
+header{gap:1rem;}
+h1{font-size:1.8rem;}
+.wrap{padding:0 1rem 3rem;}
 }
+@media (max-width:520px){
+.kpi-row{grid-template-columns:1fr 1fr;gap:.75rem;}
+.kpi{padding:1rem .875rem;}
+.kpi .val{font-size:1.5rem;}
+.brand .logo{width:2.75rem;height:2.75rem;}
+.filters{width:100%;}
+select{flex:1;min-width:0;}
+}
+
 ::selection{background:var(--copper);color:var(--ink);}
 :focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
 </style>
