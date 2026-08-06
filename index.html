@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -47,10 +48,10 @@ window.__chartReady = (function () {
 </script>
 <style>
 /* ===== Skala tunggal =====
-   Seluruh ukuran di bawah memakai rem. Mengubah --skala akan membesarkan
-   huruf DAN jarak antar elemen sekaligus, jadi tata letaknya tetap seimbang
-   di ukuran berapa pun. Ini yang membuat satu halaman bisa dipakai di ponsel
-   dan di TV ruang meeting tanpa dua versi terpisah. */
+   Semua ukuran di bawah memakai rem yang bertumpu pada --skala. Mengubah satu
+   variabel ini membesarkan huruf DAN jarak antar elemen sekaligus, jadi tata
+   letaknya tetap seimbang di ukuran berapa pun. Inilah yang membuat satu
+   halaman bisa dipakai di ponsel dan di TV ruang meeting. */
 :root{ --skala:16px; }
 html{ font-size:var(--skala); }
 
@@ -75,8 +76,8 @@ html{ font-size:var(--skala); }
 
 /* ===== Tema terang =====
    Bukan sekadar warna dibalik. Copper, sage, dan rust digelapkan supaya
-   kontrasnya di latar terang tetap memenuhi ambang keterbacaan - warna yang
-   enak dilihat di latar gelap hampir selalu terlalu pucat di latar terang. */
+   kontrasnya di latar terang tetap memenuhi ambang keterbacaan; warna yang
+   nyaman di latar gelap hampir selalu terlalu pucat di latar terang. */
 html[data-tema="terang"]{
 --ink:#F7F4ED;
 --surface:#FFFFFF;
@@ -154,13 +155,12 @@ border-radius:.45rem;
 cursor:pointer;
 appearance:none;
 min-width:9.5rem;
-background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23999'/></svg>");
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23999999'/></svg>");
 background-repeat:no-repeat;
 background-position:right .75rem center;
 }
 select:focus{outline:2px solid var(--copper);outline-offset:1px;}
 
-/* Tombol tema & mode presentasi */
 .tombol{
 background:var(--surface-raised);
 border:1px solid var(--divider);
@@ -179,10 +179,10 @@ line-height:1;
 
 /* ===== Kartu KPI =====
    auto-fit dipakai supaya jumlah kolom menyesuaikan sendiri saat huruf
-   membesar di mode presentasi - tanpa ini, lima kartu akan berdesakan. */
+   membesar di mode presentasi; tanpa ini lima kartu akan berdesakan. */
 .kpi-row{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));
+grid-template-columns:repeat(auto-fit,minmax(14.5rem,1fr));
 gap:1.125rem;
 margin-bottom:2.5rem;
 }
@@ -210,14 +210,21 @@ text-transform:uppercase;
 color:var(--text-muted);
 margin:.375rem 0 .75rem;
 }
+/* clamp + ellipsis adalah jaring pengaman. Angka yang terpotong diam-diam
+   berbahaya di laporan keuangan: "Rp1.029.876" terbaca sejuta padahal
+   semiliar. Sekarang teks mengecil dulu, dan kalau tetap tidak muat akan
+   diakhiri titik-titik supaya jelas ada yang tidak lengkap. */
 .kpi .val{
 font-family:'IBM Plex Mono',monospace;
-font-size:2rem;
+font-size:clamp(1.3rem, 2.4vw, 2rem);
 font-weight:600;
 color:var(--text);
-white-space:nowrap;
 line-height:1.1;
+white-space:nowrap;
+overflow:hidden;
+text-overflow:ellipsis;
 }
+.kpi .val .sat{font-size:.5em;margin-left:.15em;color:var(--text-muted);font-weight:500;}
 .kpi.copper .val{color:var(--copper);}
 .kpi.sage .val{color:var(--sage);}
 .kpi.rust .val{color:var(--rust);}
@@ -235,6 +242,7 @@ background:var(--surface);
 border:1px solid var(--divider);
 border-radius:.5rem;
 padding:1.25rem;
+overflow-x:auto;
 }
 .panel h3{
 font-family:'Inter',sans-serif;
@@ -250,10 +258,9 @@ margin:0 0 .875rem;
 .panel.kategori canvas{max-height:26rem;}
 
 /* ===== Tabel =====
-   Di layar sempit tabel digeser mendatar dengan kolom pertama tetap menempel,
-   bukan kolomnya disembunyikan. Menyembunyikan kolom membuat angka hilang
-   tanpa ada tandanya - orang tidak tahu ada yang tidak dia lihat. */
-.panel:has(table){overflow-x:auto;}
+   Di layar sempit tabel digeser mendatar dengan kolom pertama tetap
+   menempel, bukan kolomnya disembunyikan. Menyembunyikan kolom membuat
+   angka hilang tanpa ada tandanya. */
 table{width:100%;border-collapse:collapse;margin-top:.375rem;min-width:44rem;}
 thead th{
 text-align:right;
@@ -334,15 +341,14 @@ font-weight:600;
 }
 
 /* ===== MODE PRESENTASI =====
-   Dipakai saat ditayangkan ke TV ruang meeting. Selain membesar lewat
-   --skala, yang sekunder disembunyikan: nomor seksi, footer, dan grafik
-   kategori yang terlalu padat untuk dibaca dari jarak beberapa meter.
-   Padding tepi dilebihkan karena sebagian TV memotong pinggir layar. */
+   Untuk ditayangkan ke TV ruang meeting. Selain membesar lewat --skala, yang
+   sekunder disembunyikan: nomor seksi, footer, dan grafik kategori yang
+   terlalu padat dibaca dari jarak beberapa meter. Padding tepi dilebihkan
+   karena sebagian TV memotong pinggir layar. */
 html[data-presentasi="on"] .wrap{padding:0 2.5rem 3rem;max-width:none;}
 html[data-presentasi="on"] .section-hd .num{display:none;}
 html[data-presentasi="on"] footer{display:none;}
 html[data-presentasi="on"] .panel.kategori{display:none;}
-html[data-presentasi="on"] .kpi .val{font-size:2.4rem;}
 html[data-presentasi="on"] .panel canvas{max-height:15rem;}
 html[data-presentasi="on"] .grup-skala{display:flex;}
 html[data-presentasi="on"] tbody td{padding:.9rem .75rem;}
@@ -356,7 +362,6 @@ h1{font-size:1.8rem;}
 @media (max-width:520px){
 .kpi-row{grid-template-columns:1fr 1fr;gap:.75rem;}
 .kpi{padding:1rem .875rem;}
-.kpi .val{font-size:1.5rem;}
 .brand .logo{width:2.75rem;height:2.75rem;}
 .filters{width:100%;}
 select{flex:1;min-width:0;}
@@ -380,6 +385,12 @@ select{flex:1;min-width:0;}
 <div class="filters">
 <select id="filterBulan"></select>
 <select id="filterUnit"></select>
+<button class="tombol" id="btnTema" type="button" title="Ganti tema terang / gelap (pintasan: T)">Terang</button>
+<button class="tombol" id="btnPresentasi" type="button" aria-pressed="false" title="Perbesar untuk ditayangkan (pintasan: P)">Presentasi</button>
+<span class="grup-skala" id="grupSkala">
+<button class="tombol" id="btnKecil" type="button" title="Perkecil">&minus;</button>
+<button class="tombol" id="btnBesar" type="button" title="Perbesar">+</button>
+</span>
 </div>
 </header>
 <div id="emptyNote" class="empty-note" style="display:none;"></div>
@@ -601,6 +612,18 @@ if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(1)+"M";
 if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(0)+"jt";
 return n.toLocaleString("id-ID");
 };
+/* Format khusus kartu KPI. Angka rupiah penuh tidak pernah muat di kartu
+   selebar itu, dan memotongnya diam-diam berbahaya: "Rp1.029.876" terbaca
+   sejuta padahal semiliar. Satuan dibuat kecil supaya angkanya yang menonjol.
+   Tabel di bawah tetap memakai rupiah() dengan angka penuh. */
+const rupiahKpi = n => {
+const v = toNum(n), a = Math.abs(v);
+const f = (x, d) => x.toLocaleString("id-ID", { minimumFractionDigits:d, maximumFractionDigits:d });
+if (a >= 1e9) return "Rp " + f(v/1e9, 2) + '<span class="sat">M</span>';
+if (a >= 1e6) return "Rp " + f(v/1e6, 1) + '<span class="sat">jt</span>';
+if (a >= 1e3) return "Rp " + f(v/1e3, 0) + '<span class="sat">rb</span>';
+return "Rp " + Math.round(v).toLocaleString("id-ID");
+};
 /* ---------------------------------------------------------------------
 TARGET HPP. Setiap unit DAPUR wajib menjaga Pemakaian/Omset di bawah 60%.
 Outlet Kebuli dan Foodcourt bukan dapur, jadi tidak dinilai terhadap
@@ -737,6 +760,79 @@ charts[key] = new Chart(canvas, config);
 console.error(`Chart "${key}" gagal dibuat:`, err);
 }
 }
+/* ============================================================
+ * TEMA & MODE PRESENTASI
+ * ============================================================
+ * Tombol +/- disediakan karena ukuran yang pas bergantung pada resolusi TV
+ * dan jarak duduk orang, dua hal yang tidak bisa ditebak dari kode. Disetel
+ * sekali di ruangannya, lalu diingat browser.
+ * ============================================================ */
+const SKALA_NORMAL = 16;
+const SKALA_MIN = 14, SKALA_MAKS = 44;
+let skalaPresentasi = Number(localStorage.getItem("fsa_skala")) || 26;
+let modePresentasi = localStorage.getItem("fsa_presentasi") === "on";
+let temaAktif = localStorage.getItem("fsa_tema") || "gelap";
+
+/* Warna grafik dibaca dari CSS supaya ikut berganti saat tema diganti. */
+function warnaTema(nama){
+return getComputedStyle(document.documentElement).getPropertyValue(nama).trim() || "#888888";
+}
+/* Ukuran huruf grafik mengikuti skala halaman. */
+function fontGrafik(dasar){
+const s = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--skala")) || 16;
+return Math.round(dasar * s / 16);
+}
+
+/* Grafik digambar ulang karena warna sumbu dan ukuran huruf dibaca saat
+   pembuatan, jadi tidak ikut berubah sendiri. Dijaga supaya tidak jalan
+   sebelum data ada. */
+function gambarUlangSemuaChart(){
+if (typeof ALL_ROWS === "undefined" || !ALL_ROWS || !ALL_ROWS.length) return;
+try { render(); } catch (e) { console.warn("gagal menggambar ulang grafik:", e); }
+}
+
+function terapkanTampilan(){
+const html = document.documentElement;
+html.dataset.tema = temaAktif;
+html.dataset.presentasi = modePresentasi ? "on" : "off";
+html.style.setProperty("--skala", (modePresentasi ? skalaPresentasi : SKALA_NORMAL) + "px");
+
+const bTema = document.getElementById("btnTema");
+if (bTema) bTema.textContent = (temaAktif === "gelap") ? "Terang" : "Gelap";
+const bPres = document.getElementById("btnPresentasi");
+if (bPres) bPres.setAttribute("aria-pressed", modePresentasi ? "true" : "false");
+
+try {
+localStorage.setItem("fsa_tema", temaAktif);
+localStorage.setItem("fsa_presentasi", modePresentasi ? "on" : "off");
+localStorage.setItem("fsa_skala", String(skalaPresentasi));
+} catch (e) { /* mode penyamaran browser - abaikan */ }
+
+gambarUlangSemuaChart();
+}
+
+function pasangKendaliTampilan(){
+const t = document.getElementById("btnTema");
+if (t) t.onclick = function(){ temaAktif = (temaAktif === "gelap") ? "terang" : "gelap"; terapkanTampilan(); };
+const p = document.getElementById("btnPresentasi");
+if (p) p.onclick = function(){ modePresentasi = !modePresentasi; terapkanTampilan(); };
+const kecil = document.getElementById("btnKecil");
+if (kecil) kecil.onclick = function(){ skalaPresentasi = Math.max(SKALA_MIN, skalaPresentasi - 2); terapkanTampilan(); };
+const besar = document.getElementById("btnBesar");
+if (besar) besar.onclick = function(){ skalaPresentasi = Math.min(SKALA_MAKS, skalaPresentasi + 2); terapkanTampilan(); };
+
+/* Pintasan papan ketik, berguna kalau TV dikendalikan dari laptop. */
+document.addEventListener("keydown", function(e){
+const tag = (e.target && e.target.tagName) || "";
+if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
+if (e.key === "p" || e.key === "P"){ modePresentasi = !modePresentasi; terapkanTampilan(); }
+if (e.key === "t" || e.key === "T"){ temaAktif = (temaAktif === "gelap") ? "terang" : "gelap"; terapkanTampilan(); }
+});
+
+terapkanTampilan();
+}
+pasangKendaliTampilan();
+
 function render(){
 const rows = getFiltered();
 const bulan = document.getElementById("filterBulan").value;
@@ -759,7 +855,8 @@ const adaBelumInput = belumInput.length > 0;
 
 const labaKotor = totalOmset - totalPemakaian;
 const marginKotor = totalOmset ? (labaKotor/totalOmset*100) : 0;
-document.getElementById("kpiLaba").textContent = rupiah(labaKotor);
+document.getElementById("kpiLaba").innerHTML = rupiahKpi(labaKotor);
+document.getElementById("kpiLaba").title = rupiah(labaKotor);
 const kartuLaba = document.getElementById("kpiLabaCard");
 kartuLaba.className = "kpi " + (adaBelumInput ? "copper" : marginKotor >= 100 - TARGET_HPP ? "sage" : "rust");
 document.getElementById("kpiLabaSub").textContent = adaBelumInput
@@ -767,8 +864,10 @@ document.getElementById("kpiLabaSub").textContent = adaBelumInput
   belumInput.map(r=>r["Unit"]).join(", ") + " pemakaiannya belum diinput"
 : "margin " + marginKotor.toFixed(1) + "% · Omset − Pemakaian";
 document.getElementById("kpiPorsi").textContent = totalPorsi.toLocaleString("id-ID");
-document.getElementById("kpiOmset").textContent = rupiah(totalOmset);
-document.getElementById("kpiPemakaian").textContent = rupiah(totalPemakaian);
+document.getElementById("kpiOmset").innerHTML = rupiahKpi(totalOmset);
+document.getElementById("kpiOmset").title = rupiah(totalOmset);
+document.getElementById("kpiPemakaian").innerHTML = rupiahKpi(totalPemakaian);
+document.getElementById("kpiPemakaian").title = rupiah(totalPemakaian);
 document.getElementById("kpiPersen").textContent = persen.toFixed(2)+"%";
 const kpiCard = document.getElementById("kpiPersenCard");
 kpiCard.className = "kpi " + (persen > TARGET_HPP + 10 ? "rust" : persen > TARGET_HPP ? "copper" : "sage");
@@ -836,10 +935,10 @@ datasets: [
 },
 options: {
 responsive:true,
-plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+plugins:{ legend:{ labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(12)} } } },
 scales:{
-x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
-y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } }
+x:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)} }, grid:{ color:warnaTema('--divider') } },
+y:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>rupiahShort(v) }, grid:{ color:warnaTema('--divider') } }
 }
 }
 });
@@ -852,7 +951,7 @@ datasets: [{ data: rows.map(r=>toNum(r["Total Omset"],"Total Omset")), backgroun
 },
 options: {
 responsive:true,
-plugins:{ legend:{ position:"bottom", labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, boxWidth:10, padding:10 } } }
+plugins:{ legend:{ position:"bottom", labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, boxWidth:10, padding:10 } } }
 }
 });
 // ---- Line chart: tren mingguan (Omset & Pemakaian gabungan unit terpilih) ----
@@ -886,7 +985,7 @@ options: {
 responsive:true,
 interaction:{ mode:"index", intersect:false },
 plugins:{
-legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } },
+legend:{ labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(12)} } },
 tooltip:{ callbacks:{ label: function(ctx){
 const v = ctx.parsed.y;
 if (v === null) return ctx.dataset.label + ": –";
@@ -895,10 +994,10 @@ return ctx.dataset.label + ": " + (ctx.dataset.yAxisID === "y1"
 } } }
 },
 scales:{
-x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10} }, grid:{ color:"#2E323C" } },
-y:{ position:"left", ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } },
+x:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)} }, grid:{ color:warnaTema('--divider') } },
+y:{ position:"left", ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>rupiahShort(v) }, grid:{ color:warnaTema('--divider') } },
 y1:{ position:"right", beginAtZero:true,
-     ticks:{ color:"#C68B46", font:{family:"IBM Plex Mono", size:10}, callback:v=>v+"%" },
+     ticks:{ color:warnaTema('--copper'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>v+"%" },
      grid:{ drawOnChartArea:false } }
 }
 }
@@ -1116,10 +1215,10 @@ datasets: [
 options: {
 indexAxis: "y",
 responsive:true,
-plugins:{ legend:{ labels:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:11} } } },
+plugins:{ legend:{ labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(12)} } } },
 scales:{
-x:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10}, callback:v=>rupiahShort(v) }, grid:{ color:"#2E323C" } },
-y:{ ticks:{ color:"#8D8B84", font:{family:"IBM Plex Mono", size:10.5} }, grid:{ display:false } }
+x:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>rupiahShort(v) }, grid:{ color:warnaTema('--divider') } },
+y:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)} }, grid:{ display:false } }
 }
 }
 });
@@ -1142,6 +1241,7 @@ periksaKolomKategori(ALL_ROWS);
 if (ALL_ROWS.length){
 populateFilters(ALL_ROWS);
 render();
+terapkanTampilan();
 } else {
 document.getElementById("subHeader").textContent = "Tidak ada data untuk ditampilkan.";
 const note = document.getElementById("emptyNote");
