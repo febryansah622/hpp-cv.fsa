@@ -430,12 +430,23 @@ select{flex:1;min-width:0;}
 <canvas id="chartDonut"></canvas>
 </div>
 </div>
-<div class="section-hd"><span class="num">02</span><h2>Tren Mingguan</h2></div>
-<div class="panel wide" style="margin-bottom:32px;">
+<div class="section-hd" id="seksiPekanan"><span class="num">02</span><h2>Tren Mingguan</h2></div>
+<div class="panel wide" id="panelPekanan" style="margin-bottom:32px;">
 <h3>Omset vs Pemakaian per Pekan &middot; % HPP terhadap target</h3>
 <canvas id="chartLine"></canvas>
 </div>
-<div class="section-hd"><span class="num">03</span><h2>Rincian per Unit</h2></div>
+<div class="section-hd"><span class="num">03</span><h2>Tren Antar Bulan</h2></div>
+<div class="chart-grid" style="margin-bottom:32px;">
+<div class="panel">
+<h3>Omset vs Pemakaian per Bulan &middot; % HPP</h3>
+<canvas id="chartTrenBulan"></canvas>
+</div>
+<div class="panel">
+<h3>Biaya Bahan per Porsi &middot; per Unit</h3>
+<canvas id="chartPerPorsi"></canvas>
+</div>
+</div>
+<div class="section-hd"><span class="num">04</span><h2>Rincian per Unit</h2></div>
 <div class="panel" style="margin-bottom:18px;">
 <table>
 <thead>
@@ -446,6 +457,8 @@ select{flex:1;min-width:0;}
 <th>Pembelian</th>
 <th>Pemakaian</th>
 <th>Stok On Hand</th>
+<th>Subsidi</th>
+<th>Bahan/Porsi</th>
 <th>% Pemakaian</th>
 </tr>
 </thead>
@@ -453,7 +466,7 @@ select{flex:1;min-width:0;}
 </table>
 </div>
 <p class="sub" id="pekanSub" style="margin:0 0 12px;"></p>
-<div class="panel" style="margin-bottom:32px;">
+<div class="panel" id="panelTabelPekan" style="margin-bottom:32px;">
 <table>
 <thead>
 <tr>
@@ -468,7 +481,7 @@ select{flex:1;min-width:0;}
 <tbody id="tablePekanBody"></tbody>
 </table>
 </div>
-<div class="section-hd"><span class="num">04</span><h2>Rincian Kategori Bahan Pokok</h2></div>
+<div class="section-hd"><span class="num">05</span><h2>Rincian Kategori Bahan Pokok</h2></div>
 <p class="sub" id="kategoriSub" style="margin:-8px 0 16px;"></p>
 <div class="panel wide kategori" style="margin-bottom:18px;">
 <h3>Stok Awal · Pembelian · Pemakaian per Kategori</h3>
@@ -703,7 +716,8 @@ const unitSel = document.getElementById("filterUnit");
 const bulans = [...new Set(rows.map(r=>r["Bulan"]))]
 .sort((a,b)=>kunciBulan(a)-kunciBulan(b));
 const units = [...new Set(rows.map(r=>r["Unit"]))];
-bulanSel.innerHTML = bulans.map(b=>`<option value="${b}">${b}</option>`).join("");
+bulanSel.innerHTML = `<option value="__ALL__">Semua Bulan</option>` +
+bulans.map(b=>`<option value="${b}">${b}</option>`).join("");
 unitSel.innerHTML = `<option value="__ALL__">Semua Unit</option>` +
 units.map(u=>`<option value="${u}">${u}</option>`).join("");
 bulanSel.value = bulans[bulans.length-1];
@@ -715,10 +729,78 @@ unitSel.addEventListener("change", render);
 filtersBound = true;
 }
 }
+/* Kolom yang boleh DIJUMLAHKAN antar bulan. Semuanya ALIRAN - sesuatu yang
+   terjadi selama satu periode. */
+function kolomAliran(contoh){
+return Object.keys(contoh).filter(function(k){
+if (k === "Bulan" || k === "Unit" || k === "Terakhir Update") return false;
+if (k === "% Pemakaian/Omset") return false;          // dihitung ulang
+if (k === "Stok On Hand" || k === "Total Stok Awal") return false;  // saldo
+if (k.indexOf("Stok Awal ") === 0) return false;                    // saldo per kategori
+return typeof contoh[k] === "number" || !isNaN(Number(contoh[k]));
+});
+}
+
+/**
+ * Baris yang ditampilkan. Untuk satu bulan, apa adanya.
+ *
+ * Untuk "Semua Bulan", baris tiap unit DIGABUNG lintas bulan - dan di sinilah
+ * bedanya penting: tidak semua angka boleh dijumlahkan.
+ *
+ *   ALIRAN (omset, porsi, pembelian, pemakaian, subsidi) dijumlahkan.
+ *   SALDO (Stok On Hand, Total Stok Awal, Stok Awal per kategori) TIDAK.
+ *
+ * Stok akhir Januari dan stok akhir Februari sebagian besar barang yang sama,
+ * cuma dihitung ulang tiap bulan. Menjumlahkannya akan melipatgandakan stok
+ * yang tidak pernah ada. Yang benar: Stok On Hand diambil dari bulan
+ * TERAKHIR, dan Stok Awal dari bulan PERTAMA.
+ *
+ * Persentase juga dihitung ulang dari total gabungan, bukan dirata-rata
+ * antar bulan - bulan besar dan bulan kecil punya bobot berbeda.
+ */
 function getFiltered(){
 const bulan = document.getElementById("filterBulan").value;
 const unit = document.getElementById("filterUnit").value;
-return ALL_ROWS.filter(r => r["Bulan"] === bulan && (unit === "__ALL__" || r["Unit"] === unit));
+const cocokUnit = function(r){ return unit === "__ALL__" || r["Unit"] === unit; };
+
+if (bulan !== "__ALL__"){
+return ALL_ROWS.filter(r => r["Bulan"] === bulan && cocokUnit(r));
+}
+
+const sumber = ALL_ROWS.filter(cocokUnit);
+if (!sumber.length) return [];
+const aliran = kolomAliran(sumber[0]);
+const peta = {};
+
+sumber.forEach(function(r){
+const u = r["Unit"];
+if (!peta[u]){
+peta[u] = { "Unit": u, "Bulan": "__ALL__", "__min": Infinity, "__maks": -Infinity };
+aliran.forEach(function(k){ peta[u][k] = 0; });
+}
+const g = peta[u];
+aliran.forEach(function(k){ g[k] += toNum(r[k]); });
+
+const kb = kunciBulan(r["Bulan"]);
+if (kb <= g["__min"]){          // bulan paling awal -> sumber saldo awal
+g["__min"] = kb;
+g["Total Stok Awal"] = toNum(r["Total Stok Awal"]);
+Object.keys(r).forEach(function(k){
+if (k.indexOf("Stok Awal ") === 0) g[k] = toNum(r[k]);
+});
+}
+if (kb >= g["__maks"]){         // bulan paling akhir -> sumber saldo akhir
+g["__maks"] = kb;
+g["Stok On Hand"] = toNum(r["Stok On Hand"]);
+}
+});
+
+return Object.keys(peta).sort().map(function(u){
+const g = peta[u];
+delete g["__min"]; delete g["__maks"];
+g["% Pemakaian/Omset"] = g["Total Omset"] ? (g["Total Pemakaian"] / g["Total Omset"] * 100) : 0;
+return g;
+});
 }
 /* BUGFIX: sebelumnya instance yang sudah di-destroy tetap tersimpan di
 `charts[key]`. Kalau pembuatan chart berikutnya gagal, referensi mati itu
@@ -836,8 +918,24 @@ pasangKendaliTampilan();
 function render(){
 const rows = getFiltered();
 const bulan = document.getElementById("filterBulan").value;
+/* Rincian pekanan disembunyikan saat "Semua Bulan": menjumlahkan Pekan 1
+   dari delapan bulan berbeda tidak menjawab pertanyaan apa pun. Pergerakan
+   lintas bulan sudah ditangani seksi Tren Antar Bulan. */
+const semuaBulan = bulan === "__ALL__";
+["seksiPekanan","panelPekanan","panelTabelPekan","pekanSub"].forEach(function(id){
+const el = document.getElementById(id);
+if (el) el.style.display = semuaBulan ? "none" : "";
+});
+
+let labelBulan = bulan;
+if (semuaBulan){
+const bs = [...new Set(ALL_ROWS.map(r=>r["Bulan"]))]
+.filter(b => kunciBulan(b) !== -1)
+.sort((a,b)=>kunciBulan(a)-kunciBulan(b));
+labelBulan = bs.length ? `gabungan ${bs[0]} – ${bs[bs.length-1]}` : "semua bulan";
+}
 document.getElementById("subHeader").textContent =
-(MODE_CONTOH ? "DATA CONTOH — " : "") + `Menampilkan data ${bulan} · ${rows.length} unit`;
+(MODE_CONTOH ? "DATA CONTOH — " : "") + `Menampilkan data ${labelBulan} · ${rows.length} unit`;
 document.getElementById("footUpdated").textContent =
 "Terakhir dimuat: " + new Date().toLocaleString("id-ID");
 const totalPorsi = rows.reduce((s,r)=>s+toNum(r["Total Porsi"],"Total Porsi"),0);
@@ -889,6 +987,10 @@ tbody.innerHTML = rows.map(r => `
 <td>${rupiah(r["Total Pembelian"]||0)}</td>
 <td>${rupiah(r["Total Pemakaian"]||0)}</td>
 <td>${rupiah(r["Stok On Hand"]||0)}</td>
+<td>${toNum(r["Total Subsidi"]) > 0 ? rupiah(r["Total Subsidi"]) : "–"}</td>
+<td>${(toNum(r["Total Porsi"]) > 0 && toNum(r["Total Pemakaian"]) > 0)
+? rupiah(toNum(r["Total Pemakaian"]) / toNum(r["Total Porsi"]))
+: "–"}</td>
 <td>${(toNum(r["Total Omset"])>0 && toNum(r["Total Pemakaian"])===0)
 ? '<span class="badge" title="Pemakaian belum diinput PIC — persentase dan laba kotor unit ini belum bisa dinilai">belum diinput</span>'
 : pctBadge(toNum(r["% Pemakaian/Omset"],"% Pemakaian/Omset"), r["Unit"])}</td>
@@ -896,6 +998,7 @@ tbody.innerHTML = rows.map(r => `
 `).join("");
 renderPekan(rows);
 renderKategori(rows);
+renderTrenBulan();
 // ---- Bar chart: Omset vs Pemakaian per unit ----
 /* Unit yang punya sub-unit ditampilkan TERPECAH di sini: Dapur Tangsel jadi
 Tangsel / Tangkot / Non-reguler, Outlet Kebuli Juni jadi Margonda / Tipar.
@@ -1005,14 +1108,153 @@ y1:{ position:"right", beginAtZero:true,
 }
 /* Baris sub-unit yang relevan untuk bulan (dan opsional unit) terpilih. */
 function subUntuk(bulan, unit){
-return ALL_SUB.filter(r =>
-r["Bulan"] === bulan && (unit === undefined || r["Unit"] === unit));
+const cocok = function(r){ return unit === undefined || r["Unit"] === unit; };
+if (bulan !== "__ALL__"){
+return ALL_SUB.filter(r => r["Bulan"] === bulan && cocok(r));
+}
+/* Sub-unit hanya memuat aliran (porsi, omset, pembelian, pemakaian), tidak
+   ada saldo sama sekali - jadi penjumlahan lintas bulan aman di sini. */
+const peta = {};
+ALL_SUB.filter(cocok).forEach(function(r){
+const k = r["Unit"] + " || " + r["Sub Unit"];
+if (!peta[k]){
+peta[k] = { "Unit": r["Unit"], "Sub Unit": r["Sub Unit"], "Bulan": "__ALL__" };
+Object.keys(r).forEach(function(c){
+if (c !== "Unit" && c !== "Sub Unit" && c !== "Bulan" && c !== "Terakhir Update") peta[k][c] = 0;
+});
+}
+Object.keys(peta[k]).forEach(function(c){
+if (c === "Unit" || c === "Sub Unit" || c === "Bulan") return;
+peta[k][c] += toNum(r[c]);
+});
+});
+return Object.keys(peta).map(function(k){
+const g = peta[k];
+g["% Pemakaian/Omset"] = g["Total Omset"] ? (g["Total Pemakaian"] / g["Total Omset"] * 100) : 0;
+return g;
+});
 }
 
 /* Rincian per pekan. Untuk satu unit ini angka aslinya; untuk "Semua Unit"
 angka dijumlahkan lintas unit, dan persentasenya dihitung dari jumlah itu
 (bukan rata-rata persentase antar unit, yang akan menyesatkan karena unit
 besar dan kecil punya bobot berbeda). */
+/* ============================================================
+ * TREN ANTAR BULAN
+ * ============================================================
+ * Dua grafik, dan keduanya SENGAJA MENGABAIKAN filter Bulan - justru
+ * pergerakan lintas bulan yang jadi isinya. Filter Unit tetap dihormati.
+ *
+ * Grafik kiri menjawab: omset dan biaya bahan bergerak ke mana sejak awal
+ * tahun, dan apakah % HPP membaik atau memburuk.
+ *
+ * Grafik kanan menjawab pertanyaan yang paling sulit dijawab selama ini:
+ * berapa biaya bahan untuk satu porsi, dan dapur mana yang paling efisien.
+ * Satu garis per unit supaya bisa dibandingkan langsung. Angka ini tidak
+ * bisa dilihat dari total rupiah - dapur besar wajar biayanya besar; yang
+ * menentukan adalah biaya per porsinya.
+ * ============================================================ */
+function renderTrenBulan(){
+if (typeof ALL_ROWS === "undefined" || !ALL_ROWS.length) return;
+const unitPilih = document.getElementById("filterUnit").value;
+const scope = ALL_ROWS.filter(r => unitPilih === "__ALL__" || r["Unit"] === unitPilih);
+
+const bulan = [...new Set(scope.map(r => r["Bulan"]))]
+  .filter(b => kunciBulan(b) !== -1)
+  .sort((a,b) => kunciBulan(a) - kunciBulan(b));
+if (!bulan.length) return;
+const label = bulan.map(b => b.replace(/\s+\d{4}$/,""));
+
+const omset = [], pakai = [];
+bulan.forEach(b => {
+const rr = scope.filter(r => r["Bulan"] === b);
+omset.push(rr.reduce((s,r)=>s+toNum(r["Total Omset"]),0));
+pakai.push(rr.reduce((s,r)=>s+toNum(r["Total Pemakaian"]),0));
+});
+/* Bulan tanpa omset dibuat null, bukan 0, supaya garisnya PUTUS di situ.
+   Kalau dipaksa 0 grafiknya terlihat seolah HPP turun sempurna, padahal
+   datanya memang belum diinput. */
+const persen = omset.map((o,i) => o ? (pakai[i]/o*100) : null);
+
+const ds = [
+{ type:"bar", label:"Omset", data:omset, backgroundColor:"#7BA89355", borderColor:"#7BA893", borderWidth:1, yAxisID:"y", order:3 },
+{ type:"bar", label:"Pemakaian", data:pakai, backgroundColor:"#C1573B55", borderColor:"#C1573B", borderWidth:1, yAxisID:"y", order:3 },
+{ type:"line", label:"% Pemakaian/Omset", data:persen, borderColor:"#C68B46", backgroundColor:"transparent", tension:.3, pointRadius:4, pointBackgroundColor:"#C68B46", borderWidth:2, fill:false, yAxisID:"y1", spanGaps:false, order:1 }
+];
+if (unitPilih === "__ALL__" || punyaTarget(unitPilih)){
+ds.push({ type:"line", label:"Target maks "+TARGET_HPP+"%", data:bulan.map(()=>TARGET_HPP),
+borderColor:"#8E8FC7", borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, yAxisID:"y1", order:0 });
+}
+
+const sumbuTeks = { color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)} };
+
+makeChart("trenBulan", "chartTrenBulan", {
+type:"bar",
+data:{ labels: label, datasets: ds },
+options:{
+responsive:true,
+interaction:{ mode:"index", intersect:false },
+plugins:{
+legend:{ labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(12)} } },
+tooltip:{ callbacks:{ label: function(ctx){
+const v = ctx.parsed.y;
+if (v === null) return ctx.dataset.label + ": –";
+return ctx.dataset.label + ": " + (ctx.dataset.yAxisID === "y1" ? v.toFixed(1)+"%" : rupiah(v));
+} } }
+},
+scales:{
+x:{ ticks:sumbuTeks, grid:{ color:warnaTema('--divider') } },
+y:{ position:"left", ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>rupiahShort(v) }, grid:{ color:warnaTema('--divider') } },
+y1:{ position:"right", beginAtZero:true,
+     ticks:{ color:warnaTema('--copper'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>v+"%" },
+     grid:{ drawOnChartArea:false } }
+}
+}
+});
+
+// ---- Biaya bahan per porsi, satu garis per unit ----
+const unitList = unitPilih === "__ALL__"
+? [...new Set(ALL_ROWS.map(r=>r["Unit"]))].sort()
+: [unitPilih];
+
+const dsPorsi = unitList.map((u,i) => ({
+label: u,
+data: bulan.map(b => {
+const rr = ALL_ROWS.filter(r => r["Bulan"]===b && r["Unit"]===u);
+const p = rr.reduce((s,r)=>s+toNum(r["Total Porsi"]),0);
+const m = rr.reduce((s,r)=>s+toNum(r["Total Pemakaian"]),0);
+/* Perlu KEDUANYA ada. Unit yang porsinya tercatat tapi pemakaiannya
+   belum diinput akan menghasilkan angka nol yang menyesatkan - lebih
+   baik garisnya putus. */
+return (p > 0 && m > 0) ? m/p : null;
+}),
+borderColor: PALETTE[i % PALETTE.length],
+backgroundColor: "transparent",
+tension:.3, pointRadius:3, borderWidth:2, fill:false, spanGaps:false
+}));
+
+makeChart("perPorsi", "chartPerPorsi", {
+type:"line",
+data:{ labels: label, datasets: dsPorsi },
+options:{
+responsive:true,
+interaction:{ mode:"index", intersect:false },
+plugins:{
+legend:{ labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, boxWidth:12 } },
+tooltip:{ callbacks:{ label: function(ctx){
+return ctx.parsed.y === null
+? ctx.dataset.label + ": –"
+: ctx.dataset.label + ": " + rupiah(ctx.parsed.y) + " / porsi";
+} } }
+},
+scales:{
+x:{ ticks:sumbuTeks, grid:{ color:warnaTema('--divider') } },
+y:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)}, callback:v=>rupiahShort(v) }, grid:{ color:warnaTema('--divider') } }
+}
+}
+});
+}
+
 function renderPekan(rows){
 const unitLabel = document.getElementById("filterUnit").value;
 const satuUnit = unitLabel !== "__ALL__";
