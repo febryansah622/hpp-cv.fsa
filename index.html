@@ -366,24 +366,28 @@ h1{font-size:1.8rem;}
 select{flex:1;min-width:0;}
 }
 
-/* ===== Navigasi antar bagian =====
-   Menempel di atas saat halaman digulir, supaya saat rapat bisa langsung
-   lompat ke bagian yang sedang dibahas tanpa menggulir panjang. */
-.nav-seksi{
+/* ===== Tab bagian laporan =====
+   Satu halaman, empat tab. Yang tampil hanya tab yang dipilih, supaya saat
+   rapat layar fokus ke bagian yang sedang dibahas. Tab menempel di atas saat
+   halaman digulir, dan tetap tampil di mode presentasi. */
+.tab-bar{
 position:sticky;top:0;z-index:5;
-display:flex;gap:.5rem;overflow-x:auto;
+display:flex;gap:.25rem;overflow-x:auto;
 background:var(--ink);
-padding:.625rem 0;margin:-1rem 0 1.75rem;
+margin:-1rem 0 2rem;
 border-bottom:1px solid var(--divider);
 }
-.nav-seksi a{
-flex:none;
-font-family:'IBM Plex Mono',monospace;font-size:.85rem;
-color:var(--text-muted);text-decoration:none;
-padding:.45rem .8rem;border:1px solid var(--divider);border-radius:.45rem;
-background:var(--surface-raised);
+.tab{
+flex:none;background:none;border:0;border-bottom:3px solid transparent;
+color:var(--text-muted);
+font-family:'Inter',sans-serif;font-weight:600;font-size:.95rem;
+padding:.85rem 1.1rem .7rem;cursor:pointer;white-space:nowrap;
 }
-.nav-seksi a:hover{color:var(--copper);border-color:var(--copper);}
+.tab:hover{color:var(--text);}
+.tab[aria-selected="true"]{color:var(--copper);border-bottom-color:var(--copper);}
+.tab-isi[hidden]{display:none;}
+/* Lima kartu Purchasing muat satu baris di layar lebar. */
+.kpi-row.kpi-lima{grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));}
 .section-hd,.kpi-row{scroll-margin-top:4.5rem;}
 
 /* ===== Bagian divisi (Purchasing, Warehouse, Rekonsiliasi) ===== */
@@ -401,9 +405,8 @@ text-align:right;font-weight:600;border-top:2px solid var(--divider);white-space
 tfoot td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);}
 td.minus{color:var(--rust);}
 td .ket{display:block;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--text-faint);font-weight:400;}
-.catatan-divisi{color:var(--text-muted);font-size:.875rem;margin:-.5rem 0 1rem;}
+.catatan-divisi{color:var(--text-muted);font-size:.875rem;margin:-.75rem 0 1.25rem;}
 html[data-presentasi="on"] .catatan-divisi{display:none;}
-html[data-presentasi="on"] .nav-seksi{display:none;}
 
 ::selection{background:var(--copper);color:var(--ink);}
 :focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
@@ -431,14 +434,15 @@ html[data-presentasi="on"] .nav-seksi{display:none;}
 </span>
 </div>
 </header>
-<nav class="nav-seksi" aria-label="Bagian halaman">
-<a href="#seksiHPP">HPP Unit</a>
-<a href="#seksiPurchasing">Purchasing</a>
-<a href="#seksiWarehouse">Warehouse</a>
-<a href="#seksiRekon">Rekonsiliasi</a>
+<nav class="tab-bar" role="tablist" aria-label="Bagian laporan">
+<button class="tab" role="tab" type="button" data-tab="hpp" aria-selected="true" title="Pintasan: 1">HPP Unit</button>
+<button class="tab" role="tab" type="button" data-tab="purchasing" aria-selected="false" title="Pintasan: 2">Purchasing</button>
+<button class="tab" role="tab" type="button" data-tab="warehouse" aria-selected="false" title="Pintasan: 3">Warehouse</button>
+<button class="tab" role="tab" type="button" data-tab="rekon" aria-selected="false" title="Pintasan: 4">Rekonsiliasi</button>
 </nav>
 <div id="emptyNote" class="empty-note" style="display:none;"></div>
 <div id="chartNote" class="empty-note" style="display:none;"></div>
+<div class="tab-isi" data-tab="hpp">
 <div class="kpi-row" id="seksiHPP">
 <div class="kpi">
 <p class="lbl">Total Porsi</p>
@@ -546,12 +550,13 @@ html[data-presentasi="on"] .nav-seksi{display:none;}
 <tbody id="tableKategoriBody"></tbody>
 </table>
 </div>
-<hr class="batas-divisi">
-<div class="section-hd" id="seksiPurchasing"><span class="num">06</span><h2>Purchasing</h2></div>
+</div>
+
+<div class="tab-isi" data-tab="purchasing" hidden>
 <p class="catatan-divisi" id="divPurchasingSub"></p>
 <div id="divPurchasingNote" class="empty-note" style="display:none;"></div>
 <div id="divPurchasingIsi">
-<div class="kpi-row">
+<div class="kpi-row kpi-lima">
 <div class="kpi"><p class="lbl">Total Uang Keluar</p><p class="val mono" id="kpiPurTotal">–</p></div>
 <div class="kpi sage"><p class="lbl">Fast-moving</p><p class="val mono" id="kpiPurFast">–</p></div>
 <div class="kpi copper"><p class="lbl">Low-moving</p><p class="val mono" id="kpiPurLow">–</p></div>
@@ -591,8 +596,9 @@ html[data-presentasi="on"] .nav-seksi{display:none;}
 </div>
 </div>
 
-<hr class="batas-divisi">
-<div class="section-hd" id="seksiWarehouse"><span class="num">07</span><h2>Warehouse</h2></div>
+</div>
+
+<div class="tab-isi" data-tab="warehouse" hidden>
 <p class="catatan-divisi" id="divWarehouseSub"></p>
 <div id="divWarehouseNote" class="empty-note" style="display:none;"></div>
 <div id="divWarehouseIsi">
@@ -621,8 +627,9 @@ html[data-presentasi="on"] .nav-seksi{display:none;}
 </div>
 </div>
 
-<hr class="batas-divisi">
-<div class="section-hd" id="seksiRekon"><span class="num">08</span><h2>Rekonsiliasi Purchasing &amp; Warehouse</h2></div>
+</div>
+
+<div class="tab-isi" data-tab="rekon" hidden>
 <p class="catatan-divisi" id="divRekonSub"></p>
 <div id="divRekonNote" class="empty-note" style="display:none;"></div>
 <div class="panel" id="divRekonIsi" style="margin-bottom:32px;">
@@ -631,6 +638,7 @@ html[data-presentasi="on"] .nav-seksi{display:none;}
 <thead><tr><th>Supplier</th><th>Dibeli (Purchasing)</th><th>Masuk Gudang</th><th>Selisih</th><th>Keterangan</th></tr></thead>
 <tbody id="tabelRekonBody"></tbody><tfoot id="tabelRekonFoot"></tfoot>
 </table>
+</div>
 </div>
 <footer>
 <span id="footNote">Sumber: Google Sheets dapur, ditarik otomatis via Apps Script</span>
@@ -1765,6 +1773,9 @@ function renderDivisi(){
       .map(p => ({ label: "Pekan " + p.slice(1), bulan:[kodePilih], pekan:p }));
   }
 
+  if (tabAktif !== "hpp"){
+    document.getElementById("subHeader").textContent = "Menampilkan data " + labelPeriode + " · semua unit";
+  }
   renderPurchasing(D, bulanList, periode, semua);
   renderWarehouse(D, bulanList, periode, semua);
   renderRekon(D, bulanList);
@@ -1980,6 +1991,58 @@ function renderRekon(D, bulanList){
     sub.textContent += " Ada " + D.jumlahCatatan + " baris data bermasalah di file sumber; daftarnya di tab Catatan Data Divisi.";
   }
 }
+
+/* ============================================================
+ * TAB
+ * ============================================================
+ * Tab terakhir yang dibuka diingat browser, dan juga ditulis di alamat
+ * (#purchasing, #warehouse, ...) supaya link bisa langsung dibagikan ke tab
+ * tertentu. Pintasan papan ketik 1-4 untuk berpindah tab saat presentasi.
+ * Filter Unit disembunyikan di tab divisi karena tidak berlaku di sana.
+ * ============================================================ */
+const DAFTAR_TAB = ["hpp", "purchasing", "warehouse", "rekon"];
+const JUDUL_TAB = { hpp:"Rekap HPP", purchasing:"Purchasing", warehouse:"Warehouse", rekon:"Rekonsiliasi" };
+let tabAktif = (function(){
+  const dariAlamat = location.hash.replace("#", "");
+  if (DAFTAR_TAB.indexOf(dariAlamat) !== -1) return dariAlamat;
+  let simpan = null;
+  try { simpan = localStorage.getItem("fsa_tab"); } catch (e) {}
+  return DAFTAR_TAB.indexOf(simpan) !== -1 ? simpan : "hpp";
+})();
+
+function pilihTab(tab, dariPengguna){
+  if (DAFTAR_TAB.indexOf(tab) === -1) tab = "hpp";
+  tabAktif = tab;
+  document.querySelectorAll(".tab").forEach(b =>
+    b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"));
+  document.querySelectorAll(".tab-isi").forEach(el => { el.hidden = el.dataset.tab !== tab; });
+  const fu = document.getElementById("filterUnit");
+  if (fu) fu.style.display = tab === "hpp" ? "" : "none";
+  const h1 = document.querySelector("h1");
+  if (h1) h1.textContent = JUDUL_TAB[tab];
+  try { localStorage.setItem("fsa_tab", tab); } catch (e) {}
+  if (dariPengguna){
+    history.replaceState(null, "", "#" + tab);
+    window.scrollTo(0, 0);
+  }
+  /* Grafik di tab yang tadinya tersembunyi digambar ulang supaya ukurannya
+     mengikuti lebar layar - grafik yang dibuat saat tersembunyi lebarnya nol. */
+  gambarUlangSemuaChart();
+}
+
+document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => pilihTab(b.dataset.tab, true)));
+window.addEventListener("hashchange", () => {
+  const t = location.hash.replace("#", "");
+  if (DAFTAR_TAB.indexOf(t) !== -1 && t !== tabAktif) pilihTab(t, false);
+});
+document.addEventListener("keydown", function(e){
+  const tag = (e.target && e.target.tagName) || "";
+  if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const i = ["1","2","3","4"].indexOf(e.key);
+  if (i !== -1) pilihTab(DAFTAR_TAB[i], true);
+});
+pilihTab(tabAktif, false);
 
 (async function init(){
 /* Tunggu Chart.js selesai dimuat (lokal atau CDN cadangan) SEBELUM render,
