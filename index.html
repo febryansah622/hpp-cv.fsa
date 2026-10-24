@@ -393,6 +393,25 @@ padding:.85rem 1.1rem .7rem;cursor:pointer;white-space:nowrap;
 /* ===== Bagian divisi (Purchasing, Warehouse, Rekonsiliasi) ===== */
 .batas-divisi{border:0;border-top:1px solid var(--divider);margin:2.75rem 0 2rem;}
 .tabel-kecil table{min-width:0;}
+/* ===== Daftar peringkat =====
+   Pengganti grafik batang mendatar untuk data yang ekornya panjang (20-an
+   nama, sebagian besar kecil). Nominal dan porsi langsung terbaca tanpa
+   hover, dan yang kecil-kecil digabung ke "Lainnya" supaya yang penting
+   tidak tenggelam. */
+.daftar-batang{display:flex;flex-direction:column;gap:.95rem;}
+.db-baris{display:grid;grid-template-columns:minmax(6.5rem,9rem) 1fr auto;gap:.2rem 1rem;align-items:center;}
+.db-nama{font-family:'Fraunces',serif;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.db-jalur{height:.6rem;background:var(--surface-raised);border-radius:.3rem;overflow:hidden;}
+.db-isi{display:block;height:100%;border-radius:.3rem;}
+.db-angka{font-family:'IBM Plex Mono',monospace;font-size:.95rem;text-align:right;white-space:nowrap;line-height:1.25;}
+.db-angka small{display:block;font-size:.75rem;color:var(--text-faint);}
+.db-angka small .naik,.db-angka small .turun{color:var(--text-muted);}
+.db-lainnya{background:none;border:0;padding:0;cursor:pointer;color:var(--text-muted);text-align:left;font:inherit;}
+.db-lainnya .db-nama{color:var(--text-muted);font-family:'Inter',sans-serif;font-size:.9rem;text-decoration:underline dotted;}
+.db-sisa{display:flex;flex-direction:column;gap:.95rem;padding-left:.75rem;border-left:2px solid var(--divider);}
+.db-sisa[hidden]{display:none;}
+.db-total{border-top:1px solid var(--divider);padding-top:.75rem;font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--text-muted);display:flex;justify-content:space-between;}
+@media (max-width:520px){ .db-baris{grid-template-columns:1fr auto;} .db-jalur{grid-column:1 / 3;grid-row:2;} }
 /* Grafik batang mendatar: tinggi mengikuti jumlah baris supaya semua nama
    unit/lokasi terbaca, tidak dilompati Chart.js. */
 .kanvas-tinggi{position:relative;height:17rem;}
@@ -569,8 +588,8 @@ html[data-presentasi="on"] .catatan-divisi{display:none;}
 <canvas id="chartPurPeriode"></canvas>
 </div>
 <div class="panel">
-<h3>Fast-moving per Unit</h3>
-<div class="kanvas-tinggi" id="wrapPurUnit"><canvas id="chartPurUnit"></canvas></div>
+<h3 id="judulPurUnit">Fast-moving per Unit</h3>
+<div class="daftar-batang" id="listPurUnit"></div>
 </div>
 </div>
 <div class="panel" style="margin-bottom:18px;">
@@ -614,8 +633,8 @@ html[data-presentasi="on"] .catatan-divisi{display:none;}
 <canvas id="chartWhPeriode"></canvas>
 </div>
 <div class="panel">
-<h3>Stok Keluar per Lokasi</h3>
-<div class="kanvas-tinggi" id="wrapWhLokasi"><canvas id="chartWhLokasi"></canvas></div>
+<h3 id="judulWhLokasi">Stok Keluar per Lokasi</h3>
+<div class="daftar-batang" id="listWhLokasi"></div>
 </div>
 </div>
 <div class="panel" style="margin-bottom:32px;">
@@ -1715,6 +1734,62 @@ function opsiSumbu(rupiahDiY, horizontal){
   return horizontal ? { x:sumbuRupiah, y:Object.assign({}, sumbuLabel, { grid:{ display:false } }) }
                     : { x:sumbuLabel, y:sumbuRupiah };
 }
+/* Daftar peringkat: 7 teratas + "Lainnya" yang bisa dibuka.
+   Batang dibandingkan dengan nilai TERBESAR (supaya urutan jelas terlihat),
+   persentase dihitung terhadap TOTAL (supaya porsinya benar). */
+const BATAS_DAFTAR = 7;
+function renderDaftarBatang(idEl, items, warna, lalu, labelLalu){
+  const el = document.getElementById(idEl);
+  if (!el) return;
+  items = items.filter(x => Math.abs(x.nilai) >= 1);
+  if (!items.length){ el.innerHTML = '<p class="sub">Tidak ada data.</p>'; return; }
+  const total = items.reduce((s, x) => s + x.nilai, 0);
+  const maks = Math.max.apply(null, items.map(x => x.nilai));
+  const fmtPct = p => p.toLocaleString("id-ID", { maximumFractionDigits: p < 10 ? 1 : 0 }) + "%";
+  const baris = (x, adalahLainnya) => {
+    const lebar = maks > 0 ? Math.max(0.6, x.nilai / maks * 100) : 0;
+    let banding = "";
+    if (lalu && !adalahLainnya){
+      const v = lalu[x.label];
+      if (v > 0){
+        const d = (x.nilai - v) / v * 100;
+        banding = ` · <span class="${d >= 0 ? "naik" : "turun"}">${d >= 0 ? "▲" : "▼"} ${fmtPct(Math.abs(d))}</span>`;
+      } else banding = " · baru";
+    }
+    const nama = `<span class="db-nama" title="${x.label}">${x.label}</span>`;
+    const isi = `${nama}
+<span class="db-jalur"><span class="db-isi" style="width:${lebar}%;background:${adalahLainnya ? "var(--text-faint)" : warna};"></span></span>
+<span class="db-angka" title="${rupiah(x.nilai)}">${rupiahKpi(x.nilai).replace(/<[^>]+>/g, "")}<small>${fmtPct(x.nilai / total * 100)}${banding}</small></span>`;
+    return adalahLainnya
+      ? `<button type="button" class="db-baris db-lainnya" aria-expanded="false">${isi}</button>`
+      : `<div class="db-baris">${isi}</div>`;
+  };
+  const atas = items.length > BATAS_DAFTAR + 1 ? items.slice(0, BATAS_DAFTAR) : items;
+  const sisa = items.length > BATAS_DAFTAR + 1 ? items.slice(BATAS_DAFTAR) : [];
+  let html = atas.map(x => baris(x, false)).join("");
+  if (sisa.length){
+    const jml = sisa.reduce((s, x) => s + x.nilai, 0);
+    html += baris({ label:"Lainnya (" + sisa.length + ")", nilai:jml }, true);
+    html += `<div class="db-sisa" hidden>${sisa.map(x => baris(x, false)).join("")}</div>`;
+  }
+  html += `<div class="db-total"><span>Total${labelLalu ? " · ▲▼ dibanding " + labelLalu : ""}</span><span>${rupiah(total)}</span></div>`;
+  el.innerHTML = html;
+  const tombol = el.querySelector(".db-lainnya");
+  if (tombol) tombol.onclick = function(){
+    const panel = el.querySelector(".db-sisa");
+    panel.hidden = !panel.hidden;
+    tombol.setAttribute("aria-expanded", panel.hidden ? "false" : "true");
+  };
+}
+/* Nilai bulan sebelumnya per label, untuk perbandingan. Hanya saat satu bulan dipilih. */
+function petaBulanLalu(D, divisi, bagian, bulanList, semua){
+  if (semua) return { peta:null, label:"" };
+  const i = D.bulan.indexOf(bulanList[0]);
+  if (i < 1) return { peta:null, label:"" };
+  const prev = D.bulan[i - 1], peta = {};
+  petaLabelDiv(D, divisi, bagian, [prev]).forEach(x => { peta[x.label] = x.nilai; });
+  return { peta:peta, label:kodeKeBulan(prev).replace(/\s+\d{4}$/, "") };
+}
 /* Atur tinggi wadah grafik mendatar sesuai jumlah baris. */
 function tinggiMendatar(idWadah, jumlahBaris){
   const el = document.getElementById(idWadah);
@@ -1868,12 +1943,8 @@ ${sel(h.awal)}${sel(h.beli)}${sel(h.bayar)}${sel(h.akhir, true)}
 
   /* ---- Fast-moving per unit ---- */
   const perUnit = petaLabelDiv(D, P, "fm_unit", bulanList);
-  tinggiMendatar("wrapPurUnit", perUnit.length);
-  makeChart("purUnit", "chartPurUnit", {
-    type:"bar",
-    data:{ labels:perUnit.map(x => x.label), datasets:[{ label:"Fast-moving", data:perUnit.map(x => x.nilai), backgroundColor:"#7BA893", borderRadius:3, maxBarThickness:22 }] },
-    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipRupiah }, scales:opsiMendatar() }
-  });
+  const lalu = petaBulanLalu(D, P, "fm_unit", bulanList, semua);
+  renderDaftarBatang("listPurUnit", perUnit, "#7BA893", lalu.peta, lalu.label);
 
   /* ---- Tabel kelompok x periode ---- */
   document.getElementById("judulPurTabel").textContent = semua ? "Uang Keluar per Kelompok · per Bulan" : "Uang Keluar per Kelompok · per Pekan";
@@ -1926,12 +1997,8 @@ function renderWarehouse(D, bulanList, periode, semua){
   });
 
   const lokasi = petaLabelDiv(D, W, "keluar_lokasi", bulanList);
-  tinggiMendatar("wrapWhLokasi", lokasi.length);
-  makeChart("whLokasi", "chartWhLokasi", {
-    type:"bar",
-    data:{ labels:lokasi.map(x => x.label), datasets:[{ label:"Keluar", data:lokasi.map(x => x.nilai), backgroundColor:"#C1573B", borderRadius:3, maxBarThickness:20 }] },
-    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipRupiah }, scales:opsiMendatar() }
-  });
+  const laluLok = petaBulanLalu(D, W, "keluar_lokasi", bulanList, semua);
+  renderDaftarBatang("listWhLokasi", lokasi, "#C1573B", laluLok.peta, laluLok.label);
 
   /* Per jenis: stok awal dari bulan pertama, stok akhir dari bulan terakhir. */
   const jenis = {};
