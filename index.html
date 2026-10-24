@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rekap HPP — CV. FSA</title>
+<title>Rekap HPP, Purchasing &amp; Warehouse — CV. FSA</title>
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="apple-touch-icon" href="logo-fsa-mark.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -367,6 +366,45 @@ h1{font-size:1.8rem;}
 select{flex:1;min-width:0;}
 }
 
+/* ===== Navigasi antar bagian =====
+   Menempel di atas saat halaman digulir, supaya saat rapat bisa langsung
+   lompat ke bagian yang sedang dibahas tanpa menggulir panjang. */
+.nav-seksi{
+position:sticky;top:0;z-index:5;
+display:flex;gap:.5rem;overflow-x:auto;
+background:var(--ink);
+padding:.625rem 0;margin:-1rem 0 1.75rem;
+border-bottom:1px solid var(--divider);
+}
+.nav-seksi a{
+flex:none;
+font-family:'IBM Plex Mono',monospace;font-size:.85rem;
+color:var(--text-muted);text-decoration:none;
+padding:.45rem .8rem;border:1px solid var(--divider);border-radius:.45rem;
+background:var(--surface-raised);
+}
+.nav-seksi a:hover{color:var(--copper);border-color:var(--copper);}
+.section-hd,.kpi-row{scroll-margin-top:4.5rem;}
+
+/* ===== Bagian divisi (Purchasing, Warehouse, Rekonsiliasi) ===== */
+.batas-divisi{border:0;border-top:1px solid var(--divider);margin:2.75rem 0 2rem;}
+.tabel-kecil table{min-width:0;}
+/* Grafik batang mendatar: tinggi mengikuti jumlah baris supaya semua nama
+   unit/lokasi terbaca, tidak dilompati Chart.js. */
+.kanvas-tinggi{position:relative;height:17rem;}
+.panel .kanvas-tinggi canvas{max-height:none;}
+html[data-presentasi="on"] .panel .kanvas-tinggi canvas{max-height:none;}
+tfoot td{
+padding:.75rem;font-family:'IBM Plex Mono',monospace;font-size:.95rem;
+text-align:right;font-weight:600;border-top:2px solid var(--divider);white-space:nowrap;
+}
+tfoot td:first-child{text-align:left;position:sticky;left:0;background:var(--surface);}
+td.minus{color:var(--rust);}
+td .ket{display:block;font-family:'Inter',sans-serif;font-size:.75rem;color:var(--text-faint);font-weight:400;}
+.catatan-divisi{color:var(--text-muted);font-size:.875rem;margin:-.5rem 0 1rem;}
+html[data-presentasi="on"] .catatan-divisi{display:none;}
+html[data-presentasi="on"] .nav-seksi{display:none;}
+
 ::selection{background:var(--copper);color:var(--ink);}
 :focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
 </style>
@@ -393,9 +431,15 @@ select{flex:1;min-width:0;}
 </span>
 </div>
 </header>
+<nav class="nav-seksi" aria-label="Bagian halaman">
+<a href="#seksiHPP">HPP Unit</a>
+<a href="#seksiPurchasing">Purchasing</a>
+<a href="#seksiWarehouse">Warehouse</a>
+<a href="#seksiRekon">Rekonsiliasi</a>
+</nav>
 <div id="emptyNote" class="empty-note" style="display:none;"></div>
 <div id="chartNote" class="empty-note" style="display:none;"></div>
-<div class="kpi-row">
+<div class="kpi-row" id="seksiHPP">
 <div class="kpi">
 <p class="lbl">Total Porsi</p>
 <p class="val mono" id="kpiPorsi">–</p>
@@ -502,6 +546,92 @@ select{flex:1;min-width:0;}
 <tbody id="tableKategoriBody"></tbody>
 </table>
 </div>
+<hr class="batas-divisi">
+<div class="section-hd" id="seksiPurchasing"><span class="num">06</span><h2>Purchasing</h2></div>
+<p class="catatan-divisi" id="divPurchasingSub"></p>
+<div id="divPurchasingNote" class="empty-note" style="display:none;"></div>
+<div id="divPurchasingIsi">
+<div class="kpi-row">
+<div class="kpi"><p class="lbl">Total Uang Keluar</p><p class="val mono" id="kpiPurTotal">–</p></div>
+<div class="kpi sage"><p class="lbl">Fast-moving</p><p class="val mono" id="kpiPurFast">–</p></div>
+<div class="kpi copper"><p class="lbl">Low-moving</p><p class="val mono" id="kpiPurLow">–</p></div>
+<div class="kpi"><p class="lbl">Dibayar ke Supplier</p><p class="val mono" id="kpiPurBayar">–</p></div>
+<div class="kpi rust"><p class="lbl">Sisa Hutang Supplier</p><p class="val mono" id="kpiPurHutang">–</p><p class="lbl" id="kpiPurHutangSub" style="margin-top:6px;opacity:.75;"></p></div>
+</div>
+<div class="chart-grid">
+<div class="panel">
+<h3 id="judulPurPeriode">Uang Keluar per Pekan</h3>
+<canvas id="chartPurPeriode"></canvas>
+</div>
+<div class="panel">
+<h3>Fast-moving per Unit</h3>
+<div class="kanvas-tinggi" id="wrapPurUnit"><canvas id="chartPurUnit"></canvas></div>
+</div>
+</div>
+<div class="panel" style="margin-bottom:18px;">
+<h3 id="judulPurTabel">Uang Keluar per Kelompok</h3>
+<table><thead id="tabelPurHead"></thead><tbody id="tabelPurBody"></tbody><tfoot id="tabelPurFoot"></tfoot></table>
+</div>
+<div class="panel" style="margin-bottom:18px;">
+<h3 id="judulHutang">Hutang per Supplier</h3>
+<table>
+<thead><tr><th>Supplier</th><th>Sisa Awal</th><th>Pembelian</th><th>Pembayaran</th><th>Sisa Akhir</th><th>Status</th></tr></thead>
+<tbody id="tabelHutangBody"></tbody><tfoot id="tabelHutangFoot"></tfoot>
+</table>
+</div>
+<div class="chart-grid" style="margin-bottom:32px;">
+<div class="panel tabel-kecil">
+<h3 id="judulSaldo">Saldo Tim Purchase</h3>
+<table><thead><tr><th>Rekening</th><th>Saldo</th></tr></thead><tbody id="tabelSaldoBody"></tbody><tfoot id="tabelSaldoFoot"></tfoot></table>
+</div>
+<div class="panel tabel-kecil">
+<h3>Rincian Operasional &amp; Fast-moving per Kategori</h3>
+<table><thead><tr><th>Pos</th><th>Nilai</th></tr></thead><tbody id="tabelRincianBody"></tbody></table>
+</div>
+</div>
+</div>
+
+<hr class="batas-divisi">
+<div class="section-hd" id="seksiWarehouse"><span class="num">07</span><h2>Warehouse</h2></div>
+<p class="catatan-divisi" id="divWarehouseSub"></p>
+<div id="divWarehouseNote" class="empty-note" style="display:none;"></div>
+<div id="divWarehouseIsi">
+<div class="kpi-row">
+<div class="kpi"><p class="lbl">Stok Awal</p><p class="val mono" id="kpiWhAwal">–</p></div>
+<div class="kpi sage"><p class="lbl">Stok Masuk</p><p class="val mono" id="kpiWhMasuk">–</p></div>
+<div class="kpi rust"><p class="lbl">Stok Keluar</p><p class="val mono" id="kpiWhKeluar">–</p></div>
+<div class="kpi copper"><p class="lbl">Stok Akhir</p><p class="val mono" id="kpiWhAkhir">–</p></div>
+</div>
+<div class="chart-grid">
+<div class="panel">
+<h3 id="judulWhPeriode">Stok Masuk vs Keluar per Pekan</h3>
+<canvas id="chartWhPeriode"></canvas>
+</div>
+<div class="panel">
+<h3>Stok Keluar per Lokasi</h3>
+<div class="kanvas-tinggi" id="wrapWhLokasi"><canvas id="chartWhLokasi"></canvas></div>
+</div>
+</div>
+<div class="panel" style="margin-bottom:32px;">
+<h3>Pergerakan Stok per Jenis Barang</h3>
+<table>
+<thead><tr><th>Jenis</th><th>Stok Awal</th><th>Masuk</th><th>Keluar</th><th>Stok Akhir</th></tr></thead>
+<tbody id="tabelJenisBody"></tbody><tfoot id="tabelJenisFoot"></tfoot>
+</table>
+</div>
+</div>
+
+<hr class="batas-divisi">
+<div class="section-hd" id="seksiRekon"><span class="num">08</span><h2>Rekonsiliasi Purchasing &amp; Warehouse</h2></div>
+<p class="catatan-divisi" id="divRekonSub"></p>
+<div id="divRekonNote" class="empty-note" style="display:none;"></div>
+<div class="panel" id="divRekonIsi" style="margin-bottom:32px;">
+<h3>Pembelian Low-moving vs Barang Masuk Gudang</h3>
+<table>
+<thead><tr><th>Supplier</th><th>Dibeli (Purchasing)</th><th>Masuk Gudang</th><th>Selisih</th><th>Keterangan</th></tr></thead>
+<tbody id="tabelRekonBody"></tbody><tfoot id="tabelRekonFoot"></tfoot>
+</table>
+</div>
 <footer>
 <span id="footNote">Sumber: Google Sheets dapur, ditarik otomatis via Apps Script</span>
 <span id="footUpdated"></span>
@@ -585,7 +715,8 @@ const DEMO_DATA = [
 DEMO_DATA.forEach(withDemoCategories);
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
 let ALL_ROWS = [];
-let ALL_SUB = [];   // baris "Data Sub Unit" dari API
+let ALL_SUB = [];
+let DIVISI = null;  // data Purchasing & Warehouse dari API (lihat renderDivisi)   // baris "Data Sub Unit" dari API
 let MODE_CONTOH = false;
 let charts = {};
 /* ---------------------------------------------------------------------
@@ -678,6 +809,7 @@ const json = await res.json();
 /* doGet() bisa membalas { error: "..." } - dulu ini diam-diam jadi []. */
 if (json.error) throw new Error(json.error);
 ALL_SUB = json.subunit || [];
+DIVISI = json.divisi || null;
 return json.data || [];
 } catch(err){
 /* PENTING: dashboard pelaporan tidak boleh diam-diam menampilkan angka
@@ -999,6 +1131,7 @@ tbody.innerHTML = rows.map(r => `
 renderPekan(rows);
 renderKategori(rows);
 renderTrenBulan();
+renderDivisi();
 // ---- Bar chart: Omset vs Pemakaian per unit ----
 /* Unit yang punya sub-unit ditampilkan TERPECAH di sini: Dapur Tangsel jadi
 Tangsel / Tangkot / Non-reguler, Outlet Kebuli Juni jadi Margonda / Tipar.
@@ -1464,6 +1597,388 @@ y:{ ticks:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:
 }
 }
 });
+}
+
+/* ============================================================
+ * PURCHASING · WAREHOUSE · REKONSILIASI  (data "divisi" dari divisi.gs)
+ * ============================================================
+ * Format data dari Apps Script:
+ *   ringkasan    : [bulan "2026-10", pekan "Bulan"|"P1".."P6", divisi, bagian, label, nilai]
+ *   hutang       : [bulan, supplier, jenis, sisaAwal, pembelian, pembayaran, sisaAkhir, status]
+ *   rekonsiliasi : [bulan, supplier, dibeli, masukGudang, selisih, keterangan]
+ *
+ * Filter Bulan berlaku di bagian ini. Filter Unit TIDAK - purchasing dan
+ * warehouse melayani semua unit sekaligus, dan nama unit di file purchasing
+ * ("Situdaun") tidak sama dengan nama unit HPP ("Dapur Situdaun").
+ *
+ * "Semua Bulan": ALIRAN (uang keluar, stok masuk/keluar, pembayaran)
+ * dijumlahkan; SALDO (stok awal/akhir, sisa hutang, saldo rekening) diambil
+ * dari bulan pertama / terakhir - sama seperti aturan di bagian HPP.
+ * ============================================================ */
+const KELOMPOK_BELANJA = [
+  { label:"Fast-moving", warna:"#7BA893" },
+  { label:"Low-moving",  warna:"#C68B46" },
+  { label:"Operasional", warna:"#C1573B" },
+  { label:"Lain-lain",   warna:"#8E8FC7" },
+  { label:"Admin Bank",  warna:"#5C8AA6" },
+  { label:"Peralatan",   warna:"#B99A5B" }
+];
+
+/* "Oktober 2026" -> "2026-10" */
+function bulanKeKode(teks){
+  const k = kunciBulan(teks);
+  if (k === -1) return null;
+  const th = Math.floor(k / 12), b = (k % 12) + 1;
+  return th + "-" + String(b).padStart(2, "0");
+}
+/* "2026-10" -> "Oktober 2026" */
+function kodeKeBulan(kode){
+  const m = String(kode).match(/^(\d{4})-(\d{2})/);
+  return m ? URUTAN_BULAN[Number(m[2]) - 1] + " " + m[1] : String(kode);
+}
+/* Jaring pengaman: kalau sel Bulan sempat terbaca sebagai tanggal, Apps
+   Script mengirimnya sebagai teks ISO ("2026-06-30T17:00:00.000Z" untuk
+   1 Juli WIB). Dibaca ulang dengan jam lokal supaya bulannya tidak mundur. */
+function normKodeBulan(v){
+  const s = String(v == null ? "" : v);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)){
+    const d = new Date(s);
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+  return s.slice(0, 7);
+}
+
+let DIV_SIAP = null;   // data divisi yang sudah dinormalisasi
+function siapkanDivisi(){
+  if (DIV_SIAP) return DIV_SIAP;
+  if (!DIVISI || DIVISI.error) return null;
+  const norm = rows => (rows || []).map(r => { const x = r.slice(); x[0] = normKodeBulan(x[0]); return x; });
+  DIV_SIAP = {
+    ringkasan: norm(DIVISI.ringkasan),
+    hutang: norm(DIVISI.hutang),
+    rekon: norm(DIVISI.rekonsiliasi),
+    diperbarui: DIVISI.diperbarui || "",
+    jumlahCatatan: DIVISI.jumlahCatatan || 0
+  };
+  DIV_SIAP.bulan = [...new Set(DIV_SIAP.ringkasan.map(r => r[0]))].sort();
+  return DIV_SIAP;
+}
+
+/* Jumlah satu label (atau semua label kalau label null) untuk bulan-bulan & pekan tertentu. */
+function nilaiDiv(D, divisi, bagian, label, bulanList, pekan){
+  let s = 0;
+  D.ringkasan.forEach(r => {
+    if (r[2] !== divisi || r[3] !== bagian) return;
+    if (label !== null && r[4] !== label) return;
+    if (bulanList.indexOf(r[0]) === -1) return;
+    if (r[1] !== (pekan || "Bulan")) return;
+    s += toNum(r[5]);
+  });
+  return s;
+}
+/* Daftar label beserta jumlahnya, urut terbesar. */
+function petaLabelDiv(D, divisi, bagian, bulanList){
+  const peta = {};
+  D.ringkasan.forEach(r => {
+    if (r[2] !== divisi || r[3] !== bagian || r[1] !== "Bulan") return;
+    if (bulanList.indexOf(r[0]) === -1) return;
+    peta[r[4]] = (peta[r[4]] || 0) + toNum(r[5]);
+  });
+  return Object.keys(peta).map(k => ({ label:k, nilai:peta[k] }))
+    .sort((a, b) => b.nilai - a.nilai);
+}
+
+function tampilkanDivisi(prefix, pesan){
+  const note = document.getElementById(prefix + "Note");
+  const isi = document.getElementById(prefix + "Isi");
+  if (pesan){
+    note.style.display = "block"; note.textContent = pesan;
+    if (isi) isi.style.display = "none";
+  } else {
+    note.style.display = "none";
+    if (isi) isi.style.display = "";
+  }
+}
+
+function opsiSumbu(rupiahDiY, horizontal){
+  const teksSumbu = { color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(11)} };
+  const sumbuRupiah = { ticks:Object.assign({}, teksSumbu, { callback:v=>rupiahShort(v) }), grid:{ color:warnaTema('--divider') } };
+  const sumbuLabel = { ticks:teksSumbu, grid:{ color:warnaTema('--divider') } };
+  return horizontal ? { x:sumbuRupiah, y:Object.assign({}, sumbuLabel, { grid:{ display:false } }) }
+                    : { x:sumbuLabel, y:sumbuRupiah };
+}
+/* Atur tinggi wadah grafik mendatar sesuai jumlah baris. */
+function tinggiMendatar(idWadah, jumlahBaris){
+  const el = document.getElementById(idWadah);
+  if (el) el.style.height = Math.max(14, jumlahBaris * 1.9 + 3) + "rem";
+}
+function opsiMendatar(){
+  const o = opsiSumbu(true, true);
+  o.y.ticks.autoSkip = false;
+  return o;
+}
+function opsiLegenda(){
+  return { labels:{ color:warnaTema('--text-muted'), font:{family:"IBM Plex Mono", size:fontGrafik(12)} } };
+}
+const tooltipRupiah = { callbacks:{ label: ctx => ctx.dataset.label + ": " + rupiah(ctx.parsed[ctx.chart.options.indexAxis === "y" ? "x" : "y"]) } };
+
+function renderDivisi(){
+  const prefixes = ["divPurchasing", "divWarehouse", "divRekon"];
+  if (!DIVISI){
+    prefixes.forEach(p => tampilkanDivisi(p, MODE_CONTOH
+      ? "Data purchasing & warehouse tidak tersedia karena koneksi ke Apps Script gagal."
+      : "Apps Script belum mengirim data divisi. Pastikan Kode.gs v6.4 dan divisi.gs sudah dipasang, lalu deploy versi baru."));
+    return;
+  }
+  if (DIVISI.error){
+    prefixes.forEach(p => tampilkanDivisi(p, "Data divisi gagal dimuat: " + DIVISI.error + ". Jalankan tarikDataDivisi() di Apps Script."));
+    return;
+  }
+  const D = siapkanDivisi();
+  const pilih = document.getElementById("filterBulan").value;
+  const semua = pilih === "__ALL__";
+  const kodePilih = semua ? null : bulanKeKode(pilih);
+  const bulanList = semua ? D.bulan.slice() : (D.bulan.indexOf(kodePilih) !== -1 ? [kodePilih] : []);
+
+  if (!bulanList.length){
+    prefixes.forEach(p => tampilkanDivisi(p,
+      "Data purchasing & warehouse untuk " + pilih + " belum ada. Tambahkan file bulan ini di tab Daftar File Divisi, lalu jalankan tarikDataDivisi()."));
+    return;
+  }
+  prefixes.forEach(p => tampilkanDivisi(p, null));
+
+  const awal = bulanList[0], akhir = bulanList[bulanList.length - 1];
+  const labelPeriode = semua ? ("gabungan " + kodeKeBulan(awal) + " – " + kodeKeBulan(akhir)) : pilih;
+  const ketUmum = labelPeriode + ". Mencakup semua unit; filter Unit tidak berlaku di bagian ini.";
+  document.getElementById("divPurchasingSub").textContent = ketUmum;
+  document.getElementById("divWarehouseSub").textContent = ketUmum;
+  document.getElementById("divRekonSub").textContent =
+    "Membandingkan barang yang dibeli sebagai low-moving dengan barang yang dicatat masuk gudang, " + labelPeriode + ".";
+
+  /* Sumbu periode: per pekan untuk satu bulan, per bulan untuk Semua Bulan. */
+  let periode;
+  if (semua){
+    periode = bulanList.map(b => ({ label: kodeKeBulan(b).replace(/\s+\d{4}$/, ""), bulan:[b], pekan:"Bulan" }));
+  } else {
+    const adaP6 = D.ringkasan.some(r => r[0] === kodePilih && r[1] === "P6");
+    periode = ["P1","P2","P3","P4","P5"].concat(adaP6 ? ["P6"] : [])
+      .map(p => ({ label: "Pekan " + p.slice(1), bulan:[kodePilih], pekan:p }));
+  }
+
+  renderPurchasing(D, bulanList, periode, semua);
+  renderWarehouse(D, bulanList, periode, semua);
+  renderRekon(D, bulanList);
+
+  const foot = document.getElementById("footUpdated");
+  if (D.diperbarui && foot && foot.textContent.indexOf("divisi") === -1){
+    foot.textContent += " · Data divisi ditarik: " + new Date(D.diperbarui).toLocaleString("id-ID");
+  }
+}
+
+function renderPurchasing(D, bulanList, periode, semua){
+  const P = "Purchasing";
+  const akhir = bulanList[bulanList.length - 1];
+  const awal = bulanList[0];
+
+  const total = nilaiDiv(D, P, "utama", "Total Uang Keluar", bulanList);
+  const isiKpi = (id, v) => { const el = document.getElementById(id); el.innerHTML = rupiahKpi(v); el.title = rupiah(v); };
+  isiKpi("kpiPurTotal", total);
+  isiKpi("kpiPurFast", nilaiDiv(D, P, "utama", "Fast-moving", bulanList));
+  isiKpi("kpiPurLow", nilaiDiv(D, P, "utama", "Low-moving", bulanList));
+  isiKpi("kpiPurBayar", nilaiDiv(D, P, "pembayaran", null, bulanList));
+
+  /* ---- Hutang per supplier ---- */
+  const peta = {};
+  D.hutang.forEach(r => {
+    if (bulanList.indexOf(r[0]) === -1) return;
+    const n = r[1];
+    if (!peta[n]) peta[n] = { supplier:n, jenis:r[2], awal:0, beli:0, bayar:0, akhir:0 };
+    if (r[0] === awal) peta[n].awal = toNum(r[3]);
+    peta[n].beli += toNum(r[4]);
+    peta[n].bayar += toNum(r[5]);
+    if (r[0] === akhir) peta[n].akhir = toNum(r[6]);
+  });
+  const hutang = Object.values(peta).map(h => {
+    h.status = Math.abs(h.akhir) < 1 ? "Lunas"
+      : h.akhir < 0 ? "Lebih bayar"
+      : (h.beli === 0 && h.bayar === 0) ? "Mengendap" : "Berjalan";
+    return h;
+  }).filter(h => Math.abs(h.awal) + Math.abs(h.beli) + Math.abs(h.bayar) + Math.abs(h.akhir) >= 1)
+    .sort((a, b) => b.akhir - a.akhir);
+  const sum = k => hutang.reduce((s, h) => s + h[k], 0);
+  const totalHutang = sum("akhir");
+  isiKpi("kpiPurHutang", totalHutang);
+  const mengendap = hutang.filter(h => h.status === "Mengendap");
+  document.getElementById("kpiPurHutangSub").textContent = mengendap.length
+    ? mengendap.length + " supplier mengendap · " + rupiahShort(mengendap.reduce((s, h) => s + h.akhir, 0))
+    : "posisi akhir " + kodeKeBulan(akhir);
+
+  const badgeStatus = s => {
+    const kelas = { "Mengendap":"high", "Lebih bayar":"mid", "Lunas":"ok" }[s] || "";
+    const judul = {
+      "Mengendap":"Ada sisa tagihan, tapi tidak ada pembelian maupun pembayaran di periode ini",
+      "Lebih bayar":"Pembayaran melebihi tagihan - cek apakah ada tagihan yang belum diinput",
+      "Lunas":"Tidak ada sisa tagihan",
+      "Berjalan":"Ada pembelian dan/atau pembayaran di periode ini"
+    }[s] || "";
+    return `<span class="badge ${kelas}" title="${judul}">${s}</span>`;
+  };
+  const sel = (v, minusMerah) => `<td${minusMerah && v < 0 ? ' class="minus"' : ""}>${rupiah(v)}</td>`;
+  document.getElementById("judulHutang").textContent = "Hutang per Supplier · posisi akhir " + kodeKeBulan(akhir);
+  document.getElementById("tabelHutangBody").innerHTML = hutang.map(h => `
+<tr>
+<td>${h.supplier}<span class="ket">${h.jenis}</span></td>
+${sel(h.awal)}${sel(h.beli)}${sel(h.bayar)}${sel(h.akhir, true)}
+<td>${badgeStatus(h.status)}</td>
+</tr>`).join("") || `<tr><td colspan="6">Tidak ada hutang di periode ini.</td></tr>`;
+  document.getElementById("tabelHutangFoot").innerHTML = `
+<tr><td>Total</td><td>${rupiah(sum("awal"))}</td><td>${rupiah(sum("beli"))}</td><td>${rupiah(sum("bayar"))}</td><td>${rupiah(totalHutang)}</td><td></td></tr>`;
+
+  /* ---- Grafik uang keluar per periode (bertumpuk per kelompok) ---- */
+  document.getElementById("judulPurPeriode").textContent = semua ? "Uang Keluar per Bulan" : "Uang Keluar per Pekan";
+  const dsPeriode = KELOMPOK_BELANJA.map(k => ({
+    label:k.label,
+    data:periode.map(p => nilaiDiv(D, P, "utama", k.label, p.bulan, p.pekan)),
+    backgroundColor:k.warna, borderRadius:3, maxBarThickness:42, stack:"belanja"
+  })).filter(ds => ds.data.some(v => v));
+  makeChart("purPeriode", "chartPurPeriode", {
+    type:"bar",
+    data:{ labels:periode.map(p => p.label), datasets:dsPeriode },
+    options:{
+      responsive:true,
+      interaction:{ mode:"index", intersect:false },
+      plugins:{ legend:opsiLegenda(), tooltip:{ callbacks:{
+        label: ctx => ctx.dataset.label + ": " + rupiah(ctx.parsed.y),
+        footer: items => "Total: " + rupiah(items.reduce((s, i) => s + i.parsed.y, 0))
+      } } },
+      scales:Object.assign(opsiSumbu(true), { x:Object.assign(opsiSumbu(true).x, { stacked:true }), y:Object.assign(opsiSumbu(true).y, { stacked:true }) })
+    }
+  });
+
+  /* ---- Fast-moving per unit ---- */
+  const perUnit = petaLabelDiv(D, P, "fm_unit", bulanList);
+  tinggiMendatar("wrapPurUnit", perUnit.length);
+  makeChart("purUnit", "chartPurUnit", {
+    type:"bar",
+    data:{ labels:perUnit.map(x => x.label), datasets:[{ label:"Fast-moving", data:perUnit.map(x => x.nilai), backgroundColor:"#7BA893", borderRadius:3, maxBarThickness:22 }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipRupiah }, scales:opsiMendatar() }
+  });
+
+  /* ---- Tabel kelompok x periode ---- */
+  document.getElementById("judulPurTabel").textContent = semua ? "Uang Keluar per Kelompok · per Bulan" : "Uang Keluar per Kelompok · per Pekan";
+  const kelompokAda = KELOMPOK_BELANJA.filter(k => nilaiDiv(D, P, "utama", k.label, bulanList));
+  document.getElementById("tabelPurHead").innerHTML =
+    `<tr><th>Kelompok</th>${periode.map(p => `<th>${p.label}</th>`).join("")}<th>Total</th></tr>`;
+  document.getElementById("tabelPurBody").innerHTML = kelompokAda.map(k => `
+<tr><td>${k.label}</td>${periode.map(p => `<td>${rupiah(nilaiDiv(D, P, "utama", k.label, p.bulan, p.pekan))}</td>`).join("")}
+<td>${rupiah(nilaiDiv(D, P, "utama", k.label, bulanList))}</td></tr>`).join("");
+  document.getElementById("tabelPurFoot").innerHTML =
+    `<tr><td>Total</td>${periode.map(p => `<td>${rupiah(nilaiDiv(D, P, "utama", "Total Uang Keluar", p.bulan, p.pekan))}</td>`).join("")}<td>${rupiah(total)}</td></tr>`;
+
+  /* ---- Saldo tim purchase (posisi akhir) ---- */
+  const saldo = petaLabelDiv(D, P, "saldo", [akhir]).sort((a, b) => a.label.localeCompare(b.label));
+  document.getElementById("judulSaldo").textContent = "Saldo Tim Purchase · akhir " + kodeKeBulan(akhir);
+  document.getElementById("tabelSaldoBody").innerHTML = saldo.map(s =>
+    `<tr><td>${s.label}</td><td${s.nilai < 0 ? ' class="minus"' : ""}>${rupiah(s.nilai)}</td></tr>`).join("")
+    || `<tr><td colspan="2">Tidak ada data saldo.</td></tr>`;
+  document.getElementById("tabelSaldoFoot").innerHTML =
+    `<tr><td>Total</td><td>${rupiah(saldo.reduce((s, x) => s + x.nilai, 0))}</td></tr>`;
+
+  /* ---- Rincian operasional & fast-moving per kategori ---- */
+  const ops = petaLabelDiv(D, P, "operasional", bulanList);
+  const fmk = petaLabelDiv(D, P, "fm_kategori", bulanList);
+  const judulBaris = t => `<tr><td colspan="2" style="font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">${t}</td></tr>`;
+  document.getElementById("tabelRincianBody").innerHTML =
+    (ops.length ? judulBaris("Operasional") + ops.map(x => `<tr><td>${x.label}</td><td>${rupiah(x.nilai)}</td></tr>`).join("") : "") +
+    (fmk.length ? judulBaris("Fast-moving per kategori") + fmk.map(x => `<tr><td>${x.label}</td><td>${rupiah(x.nilai)}</td></tr>`).join("") : "");
+}
+
+function renderWarehouse(D, bulanList, periode, semua){
+  const W = "Warehouse";
+  const awal = bulanList[0], akhir = bulanList[bulanList.length - 1];
+  const isiKpi = (id, v) => { const el = document.getElementById(id); el.innerHTML = rupiahKpi(v); el.title = rupiah(v); };
+  isiKpi("kpiWhAwal", nilaiDiv(D, W, "utama", "Stok Awal", [awal]));
+  isiKpi("kpiWhMasuk", nilaiDiv(D, W, "utama", "Stok Masuk", bulanList));
+  isiKpi("kpiWhKeluar", nilaiDiv(D, W, "utama", "Stok Keluar", bulanList));
+  isiKpi("kpiWhAkhir", nilaiDiv(D, W, "utama", "Stok Akhir", [akhir]));
+
+  document.getElementById("judulWhPeriode").textContent = semua ? "Stok Masuk vs Keluar per Bulan" : "Stok Masuk vs Keluar per Pekan";
+  makeChart("whPeriode", "chartWhPeriode", {
+    type:"bar",
+    data:{ labels:periode.map(p => p.label), datasets:[
+      { label:"Masuk", data:periode.map(p => nilaiDiv(D, W, "utama", "Stok Masuk", p.bulan, p.pekan)), backgroundColor:"#7BA893", borderRadius:3, maxBarThickness:28 },
+      { label:"Keluar", data:periode.map(p => nilaiDiv(D, W, "utama", "Stok Keluar", p.bulan, p.pekan)), backgroundColor:"#C1573B", borderRadius:3, maxBarThickness:28 }
+    ] },
+    options:{ responsive:true, interaction:{ mode:"index", intersect:false },
+      plugins:{ legend:opsiLegenda(), tooltip:{ callbacks:{ label: ctx => ctx.dataset.label + ": " + rupiah(ctx.parsed.y) } } },
+      scales:opsiSumbu(true) }
+  });
+
+  const lokasi = petaLabelDiv(D, W, "keluar_lokasi", bulanList);
+  tinggiMendatar("wrapWhLokasi", lokasi.length);
+  makeChart("whLokasi", "chartWhLokasi", {
+    type:"bar",
+    data:{ labels:lokasi.map(x => x.label), datasets:[{ label:"Keluar", data:lokasi.map(x => x.nilai), backgroundColor:"#C1573B", borderRadius:3, maxBarThickness:20 }] },
+    options:{ indexAxis:"y", responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:tooltipRupiah }, scales:opsiMendatar() }
+  });
+
+  /* Per jenis: stok awal dari bulan pertama, stok akhir dari bulan terakhir. */
+  const jenis = {};
+  const ambil = (bagian, list, kolom) => petaLabelDiv(D, W, bagian, list).forEach(x => {
+    jenis[x.label] = jenis[x.label] || { awal:0, masuk:0, keluar:0, akhir:0 };
+    jenis[x.label][kolom] = x.nilai;
+  });
+  ambil("stok_awal_jenis", [awal], "awal");
+  ambil("masuk_jenis", bulanList, "masuk");
+  ambil("keluar_jenis", bulanList, "keluar");
+  ambil("stok_akhir_jenis", [akhir], "akhir");
+  const baris = Object.keys(jenis).map(k => Object.assign({ jenis:k }, jenis[k]))
+    .filter(x => Math.abs(x.awal) + Math.abs(x.masuk) + Math.abs(x.keluar) + Math.abs(x.akhir) >= 1)
+    .sort((a, b) => b.akhir - a.akhir);
+  const jml = k => baris.reduce((s, x) => s + x[k], 0);
+  document.getElementById("tabelJenisBody").innerHTML = baris.map(x => `
+<tr><td>${x.jenis}</td><td>${rupiah(x.awal)}</td><td>${rupiah(x.masuk)}</td><td>${rupiah(x.keluar)}</td><td${x.akhir < 0 ? ' class="minus"' : ""}>${rupiah(x.akhir)}</td></tr>`).join("");
+  document.getElementById("tabelJenisFoot").innerHTML =
+    `<tr><td>Total</td><td>${rupiah(jml("awal"))}</td><td>${rupiah(jml("masuk"))}</td><td>${rupiah(jml("keluar"))}</td><td>${rupiah(jml("akhir"))}</td></tr>`;
+}
+
+function renderRekon(D, bulanList){
+  const peta = {};
+  D.rekon.forEach(r => {
+    if (bulanList.indexOf(r[0]) === -1) return;
+    const n = r[1];
+    if (!peta[n]) peta[n] = { supplier:n, beli:0, masuk:0, internal:false };
+    peta[n].beli += toNum(r[2]);
+    peta[n].masuk += toNum(r[3]);
+    if (r[5] === "Produksi internal") peta[n].internal = true;
+  });
+  const baris = Object.values(peta).map(x => {
+    x.sel = x.beli - x.masuk;
+    x.ket = x.internal ? "Produksi internal"
+      : Math.abs(x.sel) < 1 ? "Cocok"
+      : x.masuk === 0 ? "Dibeli, belum masuk gudang"
+      : x.beli === 0 ? "Masuk gudang, tidak ada di purchasing" : "Selisih";
+    return x;
+  });
+  const urut = { "Selisih":0, "Dibeli, belum masuk gudang":0, "Masuk gudang, tidak ada di purchasing":0, "Produksi internal":1, "Cocok":2 };
+  baris.sort((a, b) => (urut[a.ket] - urut[b.ket]) || (Math.abs(b.sel) - Math.abs(a.sel)));
+
+  const kelas = { "Cocok":"ok", "Produksi internal":"" };
+  document.getElementById("tabelRekonBody").innerHTML = baris.map(x => `
+<tr><td>${x.supplier}</td><td>${rupiah(x.beli)}</td><td>${rupiah(x.masuk)}</td>
+<td${Math.abs(x.sel) >= 1 && !x.internal ? ' class="minus"' : ""}>${x.internal ? "–" : rupiah(x.sel)}</td>
+<td><span class="badge ${x.ket in kelas ? kelas[x.ket] : "high"}">${x.ket}</span></td></tr>`).join("")
+    || `<tr><td colspan="5">Tidak ada data rekonsiliasi untuk periode ini.</td></tr>`;
+
+  const bermasalah = baris.filter(x => !x.internal && Math.abs(x.sel) >= 1);
+  const totalSel = bermasalah.reduce((s, x) => s + x.sel, 0);
+  document.getElementById("tabelRekonFoot").innerHTML =
+    `<tr><td>${bermasalah.length} supplier perlu dicek</td><td></td><td></td><td>${rupiah(totalSel)}</td><td></td></tr>`;
+
+  const sub = document.getElementById("divRekonSub");
+  if (D.jumlahCatatan > 0){
+    sub.textContent += " Ada " + D.jumlahCatatan + " baris data bermasalah di file sumber; daftarnya di tab Catatan Data Divisi.";
+  }
 }
 
 (async function init(){
