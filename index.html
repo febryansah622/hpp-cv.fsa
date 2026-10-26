@@ -386,6 +386,39 @@ padding:.85rem 1.1rem .7rem;cursor:pointer;white-space:nowrap;
 .tab:hover{color:var(--text);}
 .tab[aria-selected="true"]{color:var(--copper);border-bottom-color:var(--copper);}
 .tab-isi[hidden]{display:none;}
+/* ===== Purchasing ===== */
+.kpi-banding{margin-top:6px;opacity:.75;}
+.panel-kepala{display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:.75rem;flex-wrap:wrap;}
+.panel-kepala h3{margin:0;}
+.toggle{display:inline-flex;border:1px solid var(--divider);border-radius:.45rem;overflow:hidden;}
+.toggle button{background:none;border:0;padding:.35rem .75rem;font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text-muted);cursor:pointer;}
+.toggle button + button{border-left:1px solid var(--divider);}
+.toggle button[aria-pressed="true"]{background:var(--surface-raised);color:var(--copper);}
+.dua-kolom{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;margin-bottom:18px;}
+.dua-kolom .panel{margin:0;}
+@media (max-width:52rem){ .dua-kolom{grid-template-columns:1fr;} }
+/* Alur hutang: sisa awal + pembelian - pembayaran = sisa akhir */
+.alur-hutang{display:flex;flex-wrap:wrap;align-items:stretch;gap:.6rem;margin:.25rem 0 1.25rem;}
+.alur-kotak{flex:1 1 9.5rem;background:var(--surface-raised);border-radius:.55rem;padding:.8rem .95rem;}
+.alur-kotak .lbl{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;}
+.alur-kotak .v{font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:600;margin-top:.35rem;white-space:nowrap;}
+.alur-kotak small{display:block;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-faint);margin-top:.3rem;}
+.alur-kotak.akhir{outline:1px solid var(--rust);}
+.alur-kotak.akhir .v{color:var(--rust);}
+.alur-op{align-self:center;font-family:'IBM Plex Mono',monospace;font-size:1.3rem;color:var(--text-faint);}
+@media (max-width:40rem){ .alur-op{display:none;} .alur-kotak{flex-basis:calc(50% - .6rem);} }
+.perhatian{border-left:3px solid var(--rust);background:var(--surface-raised);border-radius:.4rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.9rem;line-height:1.55;}
+.perhatian b{font-weight:600;}
+.tombol-semua{margin-top:.75rem;background:none;border:1px solid var(--divider);border-radius:.45rem;padding:.45rem .85rem;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;font-size:.8rem;cursor:pointer;}
+.tombol-semua:hover{color:var(--copper);border-color:var(--copper);}
+/* Saldo tim: satu kartu per orang */
+.saldo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.8rem;}
+.saldo-orang{background:var(--surface-raised);border-radius:.55rem;padding:.85rem 1rem;}
+.saldo-orang h4{margin:0 0 .5rem;font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;}
+.saldo-baris{display:flex;justify-content:space-between;gap:1rem;font-family:'IBM Plex Mono',monospace;font-size:.9rem;padding:.25rem 0;}
+.saldo-baris span:first-child{color:var(--text-muted);font-family:'Inter',sans-serif;}
+.saldo-baris.total{border-top:1px solid var(--divider);margin-top:.35rem;padding-top:.5rem;font-weight:600;}
+.saldo-baris .minus{color:var(--rust);}
 /* ===== Tab Ringkasan ===== */
 .ringkas-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1.1rem;margin-bottom:1.5rem;}
 /* Baris 1: Purchasing & Warehouse (lebar). Baris 2: HPP Dapur, HPP Store, Rekonsiliasi. */
@@ -624,42 +657,58 @@ html[data-presentasi="on"] .catatan-divisi{display:none;}
 <div id="divPurchasingNote" class="empty-note" style="display:none;"></div>
 <div id="divPurchasingIsi">
 <div class="kpi-row kpi-lima">
-<div class="kpi"><p class="lbl">Total Uang Keluar</p><p class="val mono" id="kpiPurTotal">–</p></div>
-<div class="kpi sage"><p class="lbl">Fast-moving</p><p class="val mono" id="kpiPurFast">–</p></div>
-<div class="kpi copper"><p class="lbl">Low-moving</p><p class="val mono" id="kpiPurLow">–</p></div>
-<div class="kpi"><p class="lbl">Dibayar ke Supplier</p><p class="val mono" id="kpiPurBayar">–</p></div>
-<div class="kpi rust"><p class="lbl">Sisa Hutang Supplier</p><p class="val mono" id="kpiPurHutang">–</p><p class="lbl" id="kpiPurHutangSub" style="margin-top:6px;opacity:.75;"></p></div>
+<div class="kpi"><p class="lbl">Total Uang Keluar</p><p class="val mono" id="kpiPurTotal">–</p><p class="lbl kpi-banding" id="kpiPurTotalSub"></p></div>
+<div class="kpi sage"><p class="lbl">Fast-moving</p><p class="val mono" id="kpiPurFast">–</p><p class="lbl kpi-banding" id="kpiPurFastSub"></p></div>
+<div class="kpi copper"><p class="lbl">Low-moving</p><p class="val mono" id="kpiPurLow">–</p><p class="lbl kpi-banding" id="kpiPurLowSub"></p></div>
+<div class="kpi"><p class="lbl">Dibayar ke Supplier</p><p class="val mono" id="kpiPurBayar">–</p><p class="lbl kpi-banding" id="kpiPurBayarSub"></p></div>
+<div class="kpi rust"><p class="lbl">Sisa Hutang Supplier</p><p class="val mono" id="kpiPurHutang">–</p><p class="lbl kpi-banding" id="kpiPurHutangSub"></p></div>
 </div>
+
 <div class="chart-grid">
 <div class="panel">
+<div class="panel-kepala">
 <h3 id="judulPurPeriode">Uang Keluar per Pekan</h3>
-<canvas id="chartPurPeriode"></canvas>
+<div class="toggle" role="group" aria-label="Tampilan uang keluar">
+<button type="button" data-tampil="grafik" aria-pressed="true">Grafik</button>
+<button type="button" data-tampil="tabel" aria-pressed="false">Tabel</button>
+</div>
+</div>
+<div id="purTampilGrafik"><canvas id="chartPurPeriode"></canvas></div>
+<div id="purTampilTabel" hidden>
+<table><thead id="tabelPurHead"></thead><tbody id="tabelPurBody"></tbody><tfoot id="tabelPurFoot"></tfoot></table>
+</div>
 </div>
 <div class="panel">
 <h3 id="judulPurUnit">Fast-moving per Unit</h3>
 <div class="daftar-batang" id="listPurUnit"></div>
 </div>
 </div>
-<div class="panel" style="margin-bottom:18px;">
-<h3 id="judulPurTabel">Uang Keluar per Kelompok</h3>
-<table><thead id="tabelPurHead"></thead><tbody id="tabelPurBody"></tbody><tfoot id="tabelPurFoot"></tfoot></table>
+
+<div class="dua-kolom">
+<div class="panel">
+<h3>Fast-moving per Kategori</h3>
+<div class="daftar-batang" id="listPurKategori"></div>
 </div>
+<div class="panel">
+<h3>Biaya Operasional</h3>
+<div class="daftar-batang" id="listPurOps"></div>
+</div>
+</div>
+
 <div class="panel" style="margin-bottom:18px;">
-<h3 id="judulHutang">Hutang per Supplier</h3>
+<h3 id="judulHutang">Hutang Supplier</h3>
+<div class="alur-hutang" id="alurHutang"></div>
+<div class="perhatian" id="hutangPerhatian" hidden></div>
 <table>
 <thead><tr><th>Supplier</th><th>Sisa Awal</th><th>Pembelian</th><th>Pembayaran</th><th>Sisa Akhir</th><th>Status</th></tr></thead>
 <tbody id="tabelHutangBody"></tbody><tfoot id="tabelHutangFoot"></tfoot>
 </table>
+<button type="button" class="tombol-semua" id="tombolHutangSemua" hidden></button>
 </div>
-<div class="chart-grid" style="margin-bottom:32px;">
-<div class="panel tabel-kecil">
+
+<div class="panel" style="margin-bottom:32px;">
 <h3 id="judulSaldo">Saldo Tim Purchase</h3>
-<table><thead><tr><th>Rekening</th><th>Saldo</th></tr></thead><tbody id="tabelSaldoBody"></tbody><tfoot id="tabelSaldoFoot"></tfoot></table>
-</div>
-<div class="panel tabel-kecil">
-<h3>Rincian Operasional &amp; Fast-moving per Kategori</h3>
-<table><thead><tr><th>Pos</th><th>Nilai</th></tr></thead><tbody id="tabelRincianBody"></tbody></table>
-</div>
+<div class="saldo-grid" id="saldoGrid"></div>
 </div>
 </div>
 
@@ -1916,13 +1965,29 @@ function renderPurchasing(D, bulanList, periode, semua){
   const P = "Purchasing";
   const akhir = bulanList[bulanList.length - 1];
   const awal = bulanList[0];
+  const iAwal = D.bulan.indexOf(awal);
+  const kodeLalu = (!semua && iAwal > 0) ? D.bulan[iAwal - 1] : null;
+  const namaLalu = kodeLalu ? kodeKeBulan(kodeLalu).replace(/\s+\d{4}$/, "") : "";
+  const pct = p => p.toLocaleString("id-ID", { maximumFractionDigits: p < 10 ? 1 : 0 }) + "%";
+  const banding = (kini, lalu) => {
+    if (!kodeLalu || !lalu) return "";
+    const d = (kini - lalu) / Math.abs(lalu) * 100;
+    return (d >= 0 ? "▲ " : "▼ ") + pct(Math.abs(d)) + " vs " + namaLalu;
+  };
+  const rpPendek = v => rupiahKpi(v).replace(/<[^>]+>/g, "");
 
+  /* ---- Kartu ---- */
+  const isiKpi = (id, v, lalu) => {
+    const el = document.getElementById(id); el.innerHTML = rupiahKpi(v); el.title = rupiah(v);
+    const sub = document.getElementById(id + "Sub");
+    if (sub && lalu !== undefined) sub.textContent = banding(v, lalu);
+  };
+  const nilaiLalu = (bagian, label) => kodeLalu ? nilaiDiv(D, P, bagian, label, [kodeLalu]) : 0;
   const total = nilaiDiv(D, P, "utama", "Total Uang Keluar", bulanList);
-  const isiKpi = (id, v) => { const el = document.getElementById(id); el.innerHTML = rupiahKpi(v); el.title = rupiah(v); };
-  isiKpi("kpiPurTotal", total);
-  isiKpi("kpiPurFast", nilaiDiv(D, P, "utama", "Fast-moving", bulanList));
-  isiKpi("kpiPurLow", nilaiDiv(D, P, "utama", "Low-moving", bulanList));
-  isiKpi("kpiPurBayar", nilaiDiv(D, P, "pembayaran", null, bulanList));
+  isiKpi("kpiPurTotal", total, nilaiLalu("utama", "Total Uang Keluar"));
+  isiKpi("kpiPurFast", nilaiDiv(D, P, "utama", "Fast-moving", bulanList), nilaiLalu("utama", "Fast-moving"));
+  isiKpi("kpiPurLow", nilaiDiv(D, P, "utama", "Low-moving", bulanList), nilaiLalu("utama", "Low-moving"));
+  isiKpi("kpiPurBayar", nilaiDiv(D, P, "pembayaran", null, bulanList), nilaiLalu("pembayaran", null));
 
   /* ---- Hutang per supplier ---- */
   const peta = {};
@@ -1942,36 +2007,58 @@ function renderPurchasing(D, bulanList, periode, semua){
     return h;
   }).filter(h => Math.abs(h.awal) + Math.abs(h.beli) + Math.abs(h.bayar) + Math.abs(h.akhir) >= 1)
     .sort((a, b) => b.akhir - a.akhir);
-  const sum = k => hutang.reduce((s, h) => s + h[k], 0);
+  const sum = (k, daftar) => (daftar || hutang).reduce((s, h) => s + h[k], 0);
   const totalHutang = sum("akhir");
-  isiKpi("kpiPurHutang", totalHutang);
+  const hutangLalu = kodeLalu ? D.hutang.filter(r => r[0] === kodeLalu).reduce((s, r) => s + toNum(r[6]), 0) : 0;
+  isiKpi("kpiPurHutang", totalHutang, hutangLalu);
+
+  document.getElementById("judulHutang").textContent = "Hutang Supplier · posisi akhir " + kodeKeBulan(akhir);
+  const sayur = hutang.filter(h => h.jenis === "Sayur"), nonSayur = hutang.filter(h => h.jenis !== "Sayur");
+  const rinci = k => `Sayur ${rpPendek(sum(k, sayur))} · Non-sayur ${rpPendek(sum(k, nonSayur))}`;
+  const kotak = (label, k, kelas) =>
+    `<div class="alur-kotak ${kelas || ""}"><div class="lbl">${label}</div><div class="v" title="${rupiah(sum(k))}">${rpPendek(sum(k))}</div><small>${rinci(k)}</small></div>`;
+  document.getElementById("alurHutang").innerHTML =
+    kotak(semua ? "Sisa awal " + kodeKeBulan(awal).replace(/\s+\d{4}$/, "") : "Sisa awal bulan", "awal") +
+    `<span class="alur-op">+</span>` + kotak("Pembelian", "beli") +
+    `<span class="alur-op">−</span>` + kotak("Pembayaran", "bayar") +
+    `<span class="alur-op">=</span>` + kotak("Sisa akhir", "akhir", "akhir");
+
   const mengendap = hutang.filter(h => h.status === "Mengendap");
-  document.getElementById("kpiPurHutangSub").textContent = mengendap.length
-    ? mengendap.length + " supplier mengendap · " + rupiahShort(mengendap.reduce((s, h) => s + h.akhir, 0))
-    : "posisi akhir " + kodeKeBulan(akhir);
+  const lebih = hutang.filter(h => h.status === "Lebih bayar");
+  const perhatian = document.getElementById("hutangPerhatian");
+  const kalimat = [];
+  if (mengendap.length) kalimat.push(`<b>${mengendap.length} supplier mengendap</b> (tidak ada pembelian maupun pembayaran) senilai <b>${rpPendek(sum("akhir", mengendap))}</b>: ` +
+    mengendap.map(h => `${h.supplier} ${rpPendek(h.akhir)}`).join(", ") + ".");
+  if (lebih.length) kalimat.push(`<b>${lebih.length} supplier lebih bayar</b>, cek apakah ada tagihan yang belum diinput: ` +
+    lebih.map(h => `${h.supplier} ${rpPendek(Math.abs(h.akhir))}`).join(", ") + ".");
+  perhatian.hidden = !kalimat.length;
+  perhatian.innerHTML = kalimat.join("<br>");
 
   const badgeStatus = s => {
     const kelas = { "Mengendap":"high", "Lebih bayar":"mid", "Lunas":"ok" }[s] || "";
-    const judul = {
-      "Mengendap":"Ada sisa tagihan, tapi tidak ada pembelian maupun pembayaran di periode ini",
-      "Lebih bayar":"Pembayaran melebihi tagihan - cek apakah ada tagihan yang belum diinput",
-      "Lunas":"Tidak ada sisa tagihan",
-      "Berjalan":"Ada pembelian dan/atau pembayaran di periode ini"
-    }[s] || "";
-    return `<span class="badge ${kelas}" title="${judul}">${s}</span>`;
+    return `<span class="badge ${kelas}">${s}</span>`;
   };
   const sel = (v, minusMerah) => `<td${minusMerah && v < 0 ? ' class="minus"' : ""}>${rupiah(v)}</td>`;
-  document.getElementById("judulHutang").textContent = "Hutang per Supplier · posisi akhir " + kodeKeBulan(akhir);
-  document.getElementById("tabelHutangBody").innerHTML = hutang.map(h => `
+  const BATAS_HUTANG = 10;
+  const tbody = document.getElementById("tabelHutangBody");
+  const tombol = document.getElementById("tombolHutangSemua");
+  const tulisHutang = semuaBaris => {
+    const daftar = semuaBaris ? hutang : hutang.slice(0, BATAS_HUTANG);
+    tbody.innerHTML = daftar.map(h => `
 <tr>
 <td>${h.supplier}<span class="ket">${h.jenis}</span></td>
 ${sel(h.awal)}${sel(h.beli)}${sel(h.bayar)}${sel(h.akhir, true)}
 <td>${badgeStatus(h.status)}</td>
 </tr>`).join("") || `<tr><td colspan="6">Tidak ada hutang di periode ini.</td></tr>`;
+    tombol.hidden = hutang.length <= BATAS_HUTANG;
+    tombol.textContent = semuaBaris ? "Tampilkan 10 terbesar saja" : "Tampilkan semua supplier (" + hutang.length + ")";
+    tombol.onclick = () => tulisHutang(!semuaBaris);
+  };
+  tulisHutang(false);
   document.getElementById("tabelHutangFoot").innerHTML = `
-<tr><td>Total</td><td>${rupiah(sum("awal"))}</td><td>${rupiah(sum("beli"))}</td><td>${rupiah(sum("bayar"))}</td><td>${rupiah(totalHutang)}</td><td></td></tr>`;
+<tr><td>Total ${hutang.length} supplier</td><td>${rupiah(sum("awal"))}</td><td>${rupiah(sum("beli"))}</td><td>${rupiah(sum("bayar"))}</td><td>${rupiah(totalHutang)}</td><td></td></tr>`;
 
-  /* ---- Grafik uang keluar per periode (bertumpuk per kelompok) ---- */
+  /* ---- Uang keluar per periode: grafik atau tabel ---- */
   document.getElementById("judulPurPeriode").textContent = semua ? "Uang Keluar per Bulan" : "Uang Keluar per Pekan";
   const dsPeriode = KELOMPOK_BELANJA.map(k => ({
     label:k.label,
@@ -1991,14 +2078,6 @@ ${sel(h.awal)}${sel(h.beli)}${sel(h.bayar)}${sel(h.akhir, true)}
       scales:Object.assign(opsiSumbu(true), { x:Object.assign(opsiSumbu(true).x, { stacked:true }), y:Object.assign(opsiSumbu(true).y, { stacked:true }) })
     }
   });
-
-  /* ---- Fast-moving per unit ---- */
-  const perUnit = petaLabelDiv(D, P, "fm_unit", bulanList);
-  const lalu = petaBulanLalu(D, P, "fm_unit", bulanList, semua);
-  renderDaftarBatang("listPurUnit", perUnit, "#7BA893", lalu.peta, lalu.label);
-
-  /* ---- Tabel kelompok x periode ---- */
-  document.getElementById("judulPurTabel").textContent = semua ? "Uang Keluar per Kelompok · per Bulan" : "Uang Keluar per Kelompok · per Pekan";
   const kelompokAda = KELOMPOK_BELANJA.filter(k => nilaiDiv(D, P, "utama", k.label, bulanList));
   document.getElementById("tabelPurHead").innerHTML =
     `<tr><th>Kelompok</th>${periode.map(p => `<th>${p.label}</th>`).join("")}<th>Total</th></tr>`;
@@ -2008,23 +2087,41 @@ ${sel(h.awal)}${sel(h.beli)}${sel(h.bayar)}${sel(h.akhir, true)}
   document.getElementById("tabelPurFoot").innerHTML =
     `<tr><td>Total</td>${periode.map(p => `<td>${rupiah(nilaiDiv(D, P, "utama", "Total Uang Keluar", p.bulan, p.pekan))}</td>`).join("")}<td>${rupiah(total)}</td></tr>`;
 
-  /* ---- Saldo tim purchase (posisi akhir) ---- */
-  const saldo = petaLabelDiv(D, P, "saldo", [akhir]).sort((a, b) => a.label.localeCompare(b.label));
-  document.getElementById("judulSaldo").textContent = "Saldo Tim Purchase · akhir " + kodeKeBulan(akhir);
-  document.getElementById("tabelSaldoBody").innerHTML = saldo.map(s =>
-    `<tr><td>${s.label}</td><td${s.nilai < 0 ? ' class="minus"' : ""}>${rupiah(s.nilai)}</td></tr>`).join("")
-    || `<tr><td colspan="2">Tidak ada data saldo.</td></tr>`;
-  document.getElementById("tabelSaldoFoot").innerHTML =
-    `<tr><td>Total</td><td>${rupiah(saldo.reduce((s, x) => s + x.nilai, 0))}</td></tr>`;
+  /* ---- Daftar peringkat ---- */
+  const lalu = petaBulanLalu(D, P, "fm_unit", bulanList, semua);
+  renderDaftarBatang("listPurUnit", petaLabelDiv(D, P, "fm_unit", bulanList), "#7BA893", lalu.peta, lalu.label);
+  const laluKat = petaBulanLalu(D, P, "fm_kategori", bulanList, semua);
+  renderDaftarBatang("listPurKategori", petaLabelDiv(D, P, "fm_kategori", bulanList), "#7BA893", laluKat.peta, laluKat.label);
+  const laluOps = petaBulanLalu(D, P, "operasional", bulanList, semua);
+  renderDaftarBatang("listPurOps", petaLabelDiv(D, P, "operasional", bulanList), "#C1573B", laluOps.peta, laluOps.label);
 
-  /* ---- Rincian operasional & fast-moving per kategori ---- */
-  const ops = petaLabelDiv(D, P, "operasional", bulanList);
-  const fmk = petaLabelDiv(D, P, "fm_kategori", bulanList);
-  const judulBaris = t => `<tr><td colspan="2" style="font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;">${t}</td></tr>`;
-  document.getElementById("tabelRincianBody").innerHTML =
-    (ops.length ? judulBaris("Operasional") + ops.map(x => `<tr><td>${x.label}</td><td>${rupiah(x.nilai)}</td></tr>`).join("") : "") +
-    (fmk.length ? judulBaris("Fast-moving per kategori") + fmk.map(x => `<tr><td>${x.label}</td><td>${rupiah(x.nilai)}</td></tr>`).join("") : "");
+  /* ---- Saldo tim purchase: dikelompokkan per orang ("Eby - Cimb Niaga") ---- */
+  const saldo = petaLabelDiv(D, P, "saldo", [akhir]);
+  const perOrang = {};
+  saldo.forEach(s => {
+    const bagian = s.label.split(" - ");
+    const orang = bagian[0] || "Lainnya", rek = bagian.slice(1).join(" - ") || s.label;
+    (perOrang[orang] = perOrang[orang] || []).push({ rek:rek, nilai:s.nilai });
+  });
+  document.getElementById("judulSaldo").textContent = "Saldo Tim Purchase · akhir " + kodeKeBulan(akhir);
+  const kls = v => v < 0 ? ' class="minus"' : "";
+  document.getElementById("saldoGrid").innerHTML = Object.keys(perOrang).sort().map(o => {
+    const daftar = perOrang[o].sort((a, b) => a.rek.localeCompare(b.rek));
+    const t = daftar.reduce((s, x) => s + x.nilai, 0);
+    return `<div class="saldo-orang"><h4>${o}</h4>` +
+      daftar.map(x => `<div class="saldo-baris"><span>${x.rek}</span><span${kls(x.nilai)}>${rupiah(x.nilai)}</span></div>`).join("") +
+      `<div class="saldo-baris total"><span>Total</span><span${kls(t)}>${rupiah(t)}</span></div></div>`;
+  }).join("") || '<p class="sub">Tidak ada data saldo.</p>';
 }
+
+/* Tombol Grafik / Tabel di panel uang keluar. */
+document.querySelectorAll('.toggle [data-tampil]').forEach(b => b.addEventListener("click", () => {
+  const tabel = b.dataset.tampil === "tabel";
+  b.parentElement.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+  document.getElementById("purTampilGrafik").hidden = tabel;
+  document.getElementById("purTampilTabel").hidden = !tabel;
+  if (!tabel) gambarUlangSemuaChart();
+}));
 
 function renderWarehouse(D, bulanList, periode, semua){
   const W = "Warehouse";
