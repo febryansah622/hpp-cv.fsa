@@ -386,6 +386,33 @@ padding:.85rem 1.1rem .7rem;cursor:pointer;white-space:nowrap;
 .tab:hover{color:var(--text);}
 .tab[aria-selected="true"]{color:var(--copper);border-bottom-color:var(--copper);}
 .tab-isi[hidden]{display:none;}
+/* ===== Tab Ringkasan ===== */
+.ringkas-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:1.1rem;margin-bottom:1.5rem;}
+/* Baris 1: Purchasing & Warehouse (lebar). Baris 2: HPP Dapur, HPP Store, Rekonsiliasi. */
+.ringkas-grid > .panel:nth-child(-n+2){grid-column:span 3;}
+.ringkas-grid > .panel:nth-child(n+3){grid-column:span 2;}
+@media (max-width:64rem){
+  .ringkas-grid{grid-template-columns:1fr 1fr;}
+  .ringkas-grid > .panel:nth-child(n){grid-column:span 1;}
+  .ringkas-grid > .panel:last-child{grid-column:span 2;}
+}
+@media (max-width:40rem){
+  .ringkas-grid{grid-template-columns:1fr;}
+  .ringkas-grid > .panel:nth-child(n){grid-column:span 1;}
+}
+.ringkas-grid .panel{margin:0;display:flex;flex-direction:column;}
+.ringkas-kepala{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;margin-bottom:.35rem;}
+.ringkas-kepala h3{margin:0;}
+.ringkas-link{background:none;border:0;padding:0;color:var(--copper);font-family:'IBM Plex Mono',monospace;font-size:.8rem;cursor:pointer;white-space:nowrap;}
+.ringkas-link:hover{text-decoration:underline;}
+.ringkas-metrik{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.65rem 0;border-top:1px solid var(--divider);}
+.ringkas-metrik:first-of-type{border-top:0;}
+.ringkas-metrik .lbl{color:var(--text-muted);font-size:.875rem;}
+.ringkas-metrik .v{font-family:'IBM Plex Mono',monospace;font-size:1.3rem;font-weight:600;text-align:right;white-space:nowrap;line-height:1.2;}
+.ringkas-metrik .v small{display:block;font-size:.72rem;font-weight:400;color:var(--text-faint);white-space:normal;}
+.ringkas-metrik .lbl{min-width:0;}
+.ringkas-metrik .v.rust{color:var(--rust);} .ringkas-metrik .v.sage{color:var(--sage);} .ringkas-metrik .v.copper{color:var(--copper);}
+tr.klik{cursor:pointer;} tr.klik:hover td{color:var(--copper);}
 /* Lima kartu Purchasing muat satu baris di layar lebar. */
 .kpi-row.kpi-lima{grid-template-columns:repeat(auto-fit,minmax(12rem,1fr));}
 .section-hd,.kpi-row{scroll-margin-top:4.5rem;}
@@ -454,15 +481,36 @@ html[data-presentasi="on"] .catatan-divisi{display:none;}
 </div>
 </header>
 <nav class="tab-bar" role="tablist" aria-label="Bagian laporan">
-<button class="tab" role="tab" type="button" data-tab="hpp" aria-selected="true" title="Pintasan: 1">HPP Unit</button>
+<button class="tab" role="tab" type="button" data-tab="ringkasan" aria-selected="true" title="Pintasan: 1">Ringkasan</button>
 <button class="tab" role="tab" type="button" data-tab="purchasing" aria-selected="false" title="Pintasan: 2">Purchasing</button>
 <button class="tab" role="tab" type="button" data-tab="warehouse" aria-selected="false" title="Pintasan: 3">Warehouse</button>
-<button class="tab" role="tab" type="button" data-tab="rekon" aria-selected="false" title="Pintasan: 4">Rekonsiliasi</button>
+<button class="tab" role="tab" type="button" data-tab="hpp-dapur" aria-selected="false" title="Pintasan: 4">HPP Dapur</button>
+<button class="tab" role="tab" type="button" data-tab="hpp-store" aria-selected="false" title="Pintasan: 5">HPP Store</button>
+<button class="tab" role="tab" type="button" data-tab="rekon" aria-selected="false" title="Pintasan: 6">Rekonsiliasi</button>
 </nav>
 <div id="emptyNote" class="empty-note" style="display:none;"></div>
 <div id="chartNote" class="empty-note" style="display:none;"></div>
-<div class="tab-isi" data-tab="hpp">
-<div class="kpi-row" id="seksiHPP">
+<div class="tab-isi" data-tab="ringkasan">
+<p class="catatan-divisi" id="ringkasSub"></p>
+<div class="ringkas-grid">
+<div class="panel"><div class="ringkas-kepala"><h3>Purchasing</h3><button class="ringkas-link" type="button" data-ke="purchasing">Detail →</button></div><div id="ringkasPur"></div></div>
+<div class="panel"><div class="ringkas-kepala"><h3>Warehouse</h3><button class="ringkas-link" type="button" data-ke="warehouse">Detail →</button></div><div id="ringkasWh"></div></div>
+<div class="panel"><div class="ringkas-kepala"><h3>HPP Dapur</h3><button class="ringkas-link" type="button" data-ke="hpp-dapur">Detail →</button></div><div id="ringkasDapur"></div></div>
+<div class="panel"><div class="ringkas-kepala"><h3>HPP Store</h3><button class="ringkas-link" type="button" data-ke="hpp-store">Detail →</button></div><div id="ringkasStore"></div></div>
+<div class="panel"><div class="ringkas-kepala"><h3>Rekonsiliasi</h3><button class="ringkas-link" type="button" data-ke="rekon">Detail →</button></div><div id="ringkasRekon"></div></div>
+</div>
+<div class="panel" style="margin-bottom:32px;">
+<h3>HPP per Unit</h3>
+<p class="catatan-divisi" style="margin:-.25rem 0 .75rem;">Klik nama unit untuk membuka rinciannya.</p>
+<table>
+<thead><tr><th>Unit</th><th>Porsi</th><th>Omset</th><th>Pemakaian</th><th>% HPP</th></tr></thead>
+<tbody id="tabelRingkasUnit"></tbody><tfoot id="tabelRingkasUnitFoot"></tfoot>
+</table>
+</div>
+</div>
+
+<div class="tab-isi" data-tab="hpp" hidden>
+<div class="kpi-row kpi-lima" id="seksiHPP">
 <div class="kpi">
 <p class="lbl">Total Porsi</p>
 <p class="val mono" id="kpiPorsi">–</p>
@@ -743,7 +791,9 @@ DEMO_DATA.forEach(withDemoCategories);
 const PALETTE = ["#C68B46","#7BA893","#C1573B","#8E8FC7","#5C8AA6","#B99A5B"];
 let ALL_ROWS = [];
 let ALL_SUB = [];
-let DIVISI = null;  // data Purchasing & Warehouse dari API (lihat renderDivisi)   // baris "Data Sub Unit" dari API
+let DIVISI = null;
+let ROWS_SEMUA = [];  // semua unit, sebelum dipisah Dapur / Store
+let SUB_SEMUA = [];  // data Purchasing & Warehouse dari API (lihat renderDivisi)   // baris "Data Sub Unit" dari API
 let MODE_CONTOH = false;
 let charts = {};
 /* ---------------------------------------------------------------------
@@ -1159,6 +1209,7 @@ renderPekan(rows);
 renderKategori(rows);
 renderTrenBulan();
 renderDivisi();
+renderRingkasan();
 // ---- Bar chart: Omset vs Pemakaian per unit ----
 /* Unit yang punya sub-unit ditampilkan TERPECAH di sini: Dapur Tangsel jadi
 Tangsel / Tangkot / Non-reguler, Outlet Kebuli Juni jadi Margonda / Tipar.
@@ -1848,7 +1899,7 @@ function renderDivisi(){
       .map(p => ({ label: "Pekan " + p.slice(1), bulan:[kodePilih], pekan:p }));
   }
 
-  if (tabAktif !== "hpp"){
+  if (["purchasing","warehouse","rekon"].indexOf(tabAktif) !== -1){
     document.getElementById("subHeader").textContent = "Menampilkan data " + labelPeriode + " · semua unit";
   }
   renderPurchasing(D, bulanList, periode, semua);
@@ -2067,24 +2118,64 @@ function renderRekon(D, bulanList){
  * tertentu. Pintasan papan ketik 1-4 untuk berpindah tab saat presentasi.
  * Filter Unit disembunyikan di tab divisi karena tidak berlaku di sana.
  * ============================================================ */
-const DAFTAR_TAB = ["hpp", "purchasing", "warehouse", "rekon"];
-const JUDUL_TAB = { hpp:"Rekap HPP", purchasing:"Purchasing", warehouse:"Warehouse", rekon:"Rekonsiliasi" };
+const DAFTAR_TAB = ["ringkasan", "purchasing", "warehouse", "hpp-dapur", "hpp-store", "rekon"];
+const JUDUL_TAB = {
+  ringkasan:"Ringkasan Laporan", purchasing:"Purchasing", warehouse:"Warehouse",
+  "hpp-dapur":"HPP Dapur", "hpp-store":"HPP Store", rekon:"Rekonsiliasi"
+};
+/* Tab mana yang memakai isi halaman yang mana. HPP Dapur dan HPP Store
+   memakai tampilan HPP yang sama, hanya datanya dipisah per kelompok unit. */
+const PANEL_TAB = { "hpp-dapur":"hpp", "hpp-store":"hpp" };
+
+/* Pembagian unit. Unit yang namanya mengandung "Dapur" masuk HPP Dapur,
+   sisanya masuk HPP Store. Kalau nanti ada unit dapur yang namanya tidak
+   memakai kata "Dapur", atau store yang memakainya, tulis di sini
+   (huruf kecil, tanpa spasi/tanda baca). */
+const UNIT_DAPUR_TAMBAHAN = [];
+const UNIT_STORE_TAMBAHAN = ["outletkebuli", "foodcourt"];
+function normUnit(u){ return String(u || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+function grupUnit(u){
+  const n = normUnit(u);
+  if (UNIT_STORE_TAMBAHAN.indexOf(n) !== -1) return "store";
+  if (UNIT_DAPUR_TAMBAHAN.indexOf(n) !== -1) return "dapur";
+  return n.indexOf("dapur") !== -1 ? "dapur" : "store";
+}
+
 let tabAktif = (function(){
-  const dariAlamat = location.hash.replace("#", "");
-  if (DAFTAR_TAB.indexOf(dariAlamat) !== -1) return dariAlamat;
+  let t = location.hash.replace("#", "");
+  if (t === "hpp") t = "hpp-dapur";            // link lama
+  if (DAFTAR_TAB.indexOf(t) !== -1) return t;
   let simpan = null;
   try { simpan = localStorage.getItem("fsa_tab"); } catch (e) {}
-  return DAFTAR_TAB.indexOf(simpan) !== -1 ? simpan : "hpp";
+  return DAFTAR_TAB.indexOf(simpan) !== -1 ? simpan : "ringkasan";
 })();
 
-function pilihTab(tab, dariPengguna){
-  if (DAFTAR_TAB.indexOf(tab) === -1) tab = "hpp";
+/* Batasi data HPP ke kelompok unit tab yang aktif. Semua fungsi HPP lama
+   membaca ALL_ROWS / ALL_SUB, jadi cukup dua variabel itu yang dipersempit. */
+function terapkanGrup(){
+  if (!ROWS_SEMUA.length) return;
+  const grup = tabAktif === "hpp-dapur" ? "dapur" : tabAktif === "hpp-store" ? "store" : null;
+  ALL_ROWS = grup ? ROWS_SEMUA.filter(r => grupUnit(r["Unit"]) === grup) : ROWS_SEMUA.slice();
+  ALL_SUB = grup ? SUB_SEMUA.filter(r => grupUnit(r["Unit"]) === grup) : SUB_SEMUA.slice();
+  const unitSel = document.getElementById("filterUnit");
+  const lama = unitSel.value;
+  const units = [...new Set(ALL_ROWS.map(r => r["Unit"]))];
+  const labelSemua = grup === "dapur" ? "Semua Dapur" : grup === "store" ? "Semua Store" : "Semua Unit";
+  unitSel.innerHTML = `<option value="__ALL__">${labelSemua}</option>` +
+    units.map(u => `<option value="${u}">${u}</option>`).join("");
+  unitSel.value = units.indexOf(lama) !== -1 ? lama : "__ALL__";
+}
+
+function pilihTab(tab, dariPengguna, unit){
+  if (tab === "hpp") tab = "hpp-dapur";
+  if (DAFTAR_TAB.indexOf(tab) === -1) tab = "ringkasan";
   tabAktif = tab;
+  const panel = PANEL_TAB[tab] || tab;
   document.querySelectorAll(".tab").forEach(b =>
     b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false"));
-  document.querySelectorAll(".tab-isi").forEach(el => { el.hidden = el.dataset.tab !== tab; });
+  document.querySelectorAll(".tab-isi").forEach(el => { el.hidden = el.dataset.tab !== panel; });
   const fu = document.getElementById("filterUnit");
-  if (fu) fu.style.display = tab === "hpp" ? "" : "none";
+  if (fu) fu.style.display = panel === "hpp" ? "" : "none";
   const h1 = document.querySelector("h1");
   if (h1) h1.textContent = JUDUL_TAB[tab];
   try { localStorage.setItem("fsa_tab", tab); } catch (e) {}
@@ -2092,24 +2183,152 @@ function pilihTab(tab, dariPengguna){
     history.replaceState(null, "", "#" + tab);
     window.scrollTo(0, 0);
   }
+  terapkanGrup();
+  if (unit && fu && [...fu.options].some(o => o.value === unit)) fu.value = unit;
   /* Grafik di tab yang tadinya tersembunyi digambar ulang supaya ukurannya
      mengikuti lebar layar - grafik yang dibuat saat tersembunyi lebarnya nol. */
   gambarUlangSemuaChart();
 }
 
 document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => pilihTab(b.dataset.tab, true)));
+document.querySelectorAll(".ringkas-link").forEach(b => b.addEventListener("click", () => pilihTab(b.dataset.ke, true)));
 window.addEventListener("hashchange", () => {
-  const t = location.hash.replace("#", "");
+  let t = location.hash.replace("#", "");
+  if (t === "hpp") t = "hpp-dapur";
   if (DAFTAR_TAB.indexOf(t) !== -1 && t !== tabAktif) pilihTab(t, false);
 });
 document.addEventListener("keydown", function(e){
   const tag = (e.target && e.target.tagName) || "";
   if (tag === "SELECT" || tag === "INPUT" || tag === "TEXTAREA") return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  const i = ["1","2","3","4"].indexOf(e.key);
+  const i = ["1","2","3","4","5","6"].indexOf(e.key);
   if (i !== -1) pilihTab(DAFTAR_TAB[i], true);
 });
 pilihTab(tabAktif, false);
+
+/* ============================================================
+ * RINGKASAN - satu layar untuk semua laporan
+ * ============================================================
+ * Memakai data penuh (ROWS_SEMUA), tidak terpengaruh tab HPP mana yang
+ * terakhir dibuka. Perbandingan ▲▼ hanya saat satu bulan dipilih dan bulan
+ * sebelumnya ada datanya.
+ * ============================================================ */
+function renderRingkasan(){
+  if (!ROWS_SEMUA.length) return;
+  const pilih = document.getElementById("filterBulan").value;
+  const semua = pilih === "__ALL__";
+  const bulanHPP = [...new Set(ROWS_SEMUA.map(r => r["Bulan"]))]
+    .filter(b => kunciBulan(b) !== -1).sort((a, b) => kunciBulan(a) - kunciBulan(b));
+  const daftar = semua ? bulanHPP : [pilih];
+  const iPilih = bulanHPP.indexOf(pilih);
+  const bulanLalu = (!semua && iPilih > 0) ? bulanHPP[iPilih - 1] : null;
+  const namaLalu = bulanLalu ? bulanLalu.replace(/\s+\d{4}$/, "") : "";
+
+  const labelPeriode = semua && bulanHPP.length ? ("gabungan " + bulanHPP[0] + " – " + bulanHPP[bulanHPP.length - 1]) : pilih;
+  document.getElementById("ringkasSub").textContent = "Ringkasan " + labelPeriode + ". Pilih Detail untuk membuka laporan lengkapnya.";
+  if (tabAktif === "ringkasan"){
+    document.getElementById("subHeader").textContent = (MODE_CONTOH ? "DATA CONTOH — " : "") + "Menampilkan data " + labelPeriode + " · semua laporan";
+  }
+
+  const pct = p => p.toLocaleString("id-ID", { maximumFractionDigits:1 }) + "%";
+  const bandingRp = (kini, lalu) => {
+    if (lalu === null || lalu === undefined || !namaLalu) return "";
+    if (!lalu) return "";
+    const d = (kini - lalu) / Math.abs(lalu) * 100;
+    return (d >= 0 ? "▲ " : "▼ ") + pct(Math.abs(d)) + " vs " + namaLalu;
+  };
+  const bandingPoin = (kini, lalu) => {
+    if (lalu === null || lalu === undefined || !namaLalu) return "";
+    const d = kini - lalu;
+    return (d >= 0 ? "▲ " : "▼ ") + Math.abs(d).toLocaleString("id-ID", { maximumFractionDigits:1 }) + " poin vs " + namaLalu;
+  };
+  const metrik = (label, nilai, ket, warna) =>
+    `<div class="ringkas-metrik"><span class="lbl">${label}</span><span class="v ${warna || ""}">${nilai}${ket ? `<small>${ket}</small>` : ""}</span></div>`;
+  const rpPendek = v => rupiahKpi(v).replace(/<[^>]+>/g, "");
+
+  /* ---- HPP Dapur & Store ---- */
+  const aggHPP = (grup, bulans) => {
+    const rows = ROWS_SEMUA.filter(r => grupUnit(r["Unit"]) === grup && bulans.indexOf(r["Bulan"]) !== -1);
+    const o = rows.reduce((s, r) => s + toNum(r["Total Omset"]), 0);
+    const p = rows.reduce((s, r) => s + toNum(r["Total Pemakaian"]), 0);
+    return { ada:rows.length > 0, omset:o, pakai:p, pct:o ? p / o * 100 : 0 };
+  };
+  [["dapur", "ringkasDapur"], ["store", "ringkasStore"]].forEach(([grup, id]) => {
+    const k = aggHPP(grup, daftar);
+    const l = bulanLalu ? aggHPP(grup, [bulanLalu]) : null;
+    document.getElementById(id).innerHTML = !k.ada ? '<p class="sub">Belum ada data.</p>' :
+      metrik("Omset", rpPendek(k.omset), l && l.ada ? bandingRp(k.omset, l.omset) : "") +
+      metrik("Pemakaian", rpPendek(k.pakai), l && l.ada ? bandingRp(k.pakai, l.pakai) : "") +
+      metrik("% HPP", pct(k.pct), l && l.ada ? bandingPoin(k.pct, l.pct) : "", "copper");
+  });
+
+  /* ---- Tabel HPP per unit ---- */
+  const perUnit = {};
+  ROWS_SEMUA.filter(r => daftar.indexOf(r["Bulan"]) !== -1).forEach(r => {
+    const u = r["Unit"];
+    if (!perUnit[u]) perUnit[u] = { unit:u, grup:grupUnit(u), porsi:0, omset:0, pakai:0 };
+    perUnit[u].porsi += toNum(r["Total Porsi"]);
+    perUnit[u].omset += toNum(r["Total Omset"]);
+    perUnit[u].pakai += toNum(r["Total Pemakaian"]);
+  });
+  const unitList = Object.values(perUnit).sort((a, b) => (a.grup === b.grup ? b.omset - a.omset : (a.grup === "dapur" ? -1 : 1)));
+  document.getElementById("tabelRingkasUnit").innerHTML = unitList.map(u => `
+<tr class="klik" data-unit="${u.unit}" data-grup="${u.grup}" title="Buka ${u.unit}">
+<td>${u.unit}<span class="ket">${u.grup === "dapur" ? "Dapur" : "Store"}</span></td>
+<td>${Math.round(u.porsi).toLocaleString("id-ID")}</td><td>${rupiah(u.omset)}</td><td>${rupiah(u.pakai)}</td>
+<td>${u.omset ? pct(u.pakai / u.omset * 100) : "–"}</td></tr>`).join("");
+  const tO = unitList.reduce((s, u) => s + u.omset, 0), tP = unitList.reduce((s, u) => s + u.pakai, 0);
+  document.getElementById("tabelRingkasUnitFoot").innerHTML =
+    `<tr><td>Total</td><td>${Math.round(unitList.reduce((s, u) => s + u.porsi, 0)).toLocaleString("id-ID")}</td><td>${rupiah(tO)}</td><td>${rupiah(tP)}</td><td>${tO ? pct(tP / tO * 100) : "–"}</td></tr>`;
+  document.querySelectorAll("#tabelRingkasUnit tr.klik").forEach(tr => tr.onclick = () =>
+    pilihTab(tr.dataset.grup === "dapur" ? "hpp-dapur" : "hpp-store", true, tr.dataset.unit));
+
+  /* ---- Purchasing, Warehouse, Rekonsiliasi ---- */
+  const D = siapkanDivisi();
+  const kosong = pesan => ["ringkasPur", "ringkasWh", "ringkasRekon"].forEach(id =>
+    document.getElementById(id).innerHTML = `<p class="sub">${pesan}</p>`);
+  if (!D){ kosong(DIVISI && DIVISI.error ? "Data divisi gagal dimuat." : "Data divisi belum tersedia."); return; }
+  const kodeList = semua ? D.bulan.slice() : D.bulan.filter(b => b === bulanKeKode(pilih));
+  if (!kodeList.length){ kosong("Belum ada data untuk " + pilih + "."); return; }
+  const kodeAkhir = kodeList[kodeList.length - 1];
+  const iKode = D.bulan.indexOf(kodeList[0]);
+  const kodeLalu = (!semua && iKode > 0) ? D.bulan[iKode - 1] : null;
+  const P = "Purchasing", W = "Warehouse";
+
+  const uang = nilaiDiv(D, P, "utama", "Total Uang Keluar", kodeList);
+  const uangLalu = kodeLalu ? nilaiDiv(D, P, "utama", "Total Uang Keluar", [kodeLalu]) : null;
+  const hutangPada = kode => D.hutang.filter(r => r[0] === kode).reduce((s, r) => s + toNum(r[6]), 0);
+  const hutang = hutangPada(kodeAkhir);
+  const hutangLalu = kodeLalu ? hutangPada(kodeLalu) : null;
+  const mengendap = D.hutang.filter(r => r[0] === kodeAkhir && toNum(r[6]) >= 1 && !toNum(r[4]) && !toNum(r[5]));
+  const ketLalu = kodeLalu ? namaLalu : "";
+  const bRp = (a, b) => (b === null || !ketLalu) ? "" : bandingRp(a, b);
+  document.getElementById("ringkasPur").innerHTML =
+    metrik("Total uang keluar", rpPendek(uang), bRp(uang, uangLalu)) +
+    metrik("Sisa hutang supplier", rpPendek(hutang), bRp(hutang, hutangLalu), "rust") +
+    metrik("Hutang mengendap", mengendap.length + " supplier", mengendap.length ? rpPendek(mengendap.reduce((s, r) => s + toNum(r[6]), 0)) : "");
+
+  const masuk = nilaiDiv(D, W, "utama", "Stok Masuk", kodeList);
+  const keluar = nilaiDiv(D, W, "utama", "Stok Keluar", kodeList);
+  const akhir = nilaiDiv(D, W, "utama", "Stok Akhir", [kodeAkhir]);
+  document.getElementById("ringkasWh").innerHTML =
+    metrik("Stok masuk", rpPendek(masuk), kodeLalu ? bRp(masuk, nilaiDiv(D, W, "utama", "Stok Masuk", [kodeLalu])) : "", "sage") +
+    metrik("Stok keluar", rpPendek(keluar), kodeLalu ? bRp(keluar, nilaiDiv(D, W, "utama", "Stok Keluar", [kodeLalu])) : "", "rust") +
+    metrik("Stok akhir", rpPendek(akhir), kodeLalu ? bRp(akhir, nilaiDiv(D, W, "utama", "Stok Akhir", [kodeLalu])) : "");
+
+  const rek = {};
+  D.rekon.filter(r => kodeList.indexOf(r[0]) !== -1).forEach(r => {
+    rek[r[1]] = rek[r[1]] || { sel:0, internal:false };
+    rek[r[1]].sel += toNum(r[2]) - toNum(r[3]);
+    if (r[5] === "Produksi internal") rek[r[1]].internal = true;
+  });
+  const masalah = Object.keys(rek).filter(n => !rek[n].internal && Math.abs(rek[n].sel) >= 1);
+  const totSel = masalah.reduce((s, n) => s + rek[n].sel, 0);
+  document.getElementById("ringkasRekon").innerHTML =
+    metrik("Supplier perlu dicek", masalah.length + " dari " + Object.keys(rek).length, "", masalah.length ? "rust" : "sage") +
+    metrik("Total selisih", rpPendek(Math.abs(totSel)), masalah.slice(0, 3).join(", ")) +
+    (D.jumlahCatatan ? metrik("Baris data bermasalah", D.jumlahCatatan + " baris", "lihat tab Catatan Data Divisi") : "");
+}
 
 (async function init(){
 /* Tunggu Chart.js selesai dimuat (lokal atau CDN cadangan) SEBELUM render,
@@ -2124,9 +2343,12 @@ note.textContent =
 }
 
 ALL_ROWS = await loadData();
+ROWS_SEMUA = ALL_ROWS.slice();
+SUB_SEMUA = (ALL_SUB || []).slice();
 periksaKolomKategori(ALL_ROWS);
 if (ALL_ROWS.length){
-populateFilters(ALL_ROWS);
+populateFilters(ROWS_SEMUA);
+terapkanGrup();
 render();
 terapkanTampilan();
 } else {
